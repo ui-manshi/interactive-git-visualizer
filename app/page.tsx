@@ -29,7 +29,7 @@ export default function HomePage() {
       <Toolbar>
         <Brand />
         <span className="flex-1" />
-        <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-[13px] inline-flex items-center">
+        <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-sm inline-flex items-center">
           Simulator
         </Link>
       </Toolbar>
@@ -37,7 +37,7 @@ export default function HomePage() {
       <main className="flex-1 px-4 sm:px-8 lg:px-16 py-12 sm:py-20">
         <div className="max-w-[40rem]">
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight m-0">Open a Git repository</h1>
-          <p className="text-[15px] text-muted leading-relaxed mt-4 mb-0 max-w-[52ch]">
+          <p className="text-lg text-muted leading-relaxed mt-4 mb-0 max-w-[52ch]">
             Follow every branch and merge, browse the files as they were at any commit, and compare any two commits line by
             line. Works with a local folder or a public GitHub URL.
           </p>
@@ -82,7 +82,7 @@ export default function HomePage() {
             </div>
           </form>
 
-          <div className="mt-12 pt-6 border-t border-line text-sm text-muted space-y-3">
+          <div className="mt-12 text-sm text-muted space-y-3">
             <p className="m-0">
               New to Git?{" "}
               <Link href="/simulator" className="text-accent hover:underline">

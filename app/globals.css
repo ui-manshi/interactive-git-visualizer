@@ -2,9 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design tokens. Surfaces step up in lightness (ground < surface < raised);
-   structure comes from 1px borders, not shadows. Branch colours are defined
-   in components/branchColors.ts so graph, sidebar and legend share one source. */
+/* Design tokens. Surfaces step up in lightness (ground < surface < raised); hierarchy
+   comes from those steps and from spacing, not from rules. Borders are kept only on
+   controls (fields, buttons) where they signal "you can act here". Branch colours are
+   defined in components/branchColors.ts so graph, sidebar and legend share one source.
+   Spacing is a 4px grid; type is 11 / 12 / 13 / 15 / 20 (see tailwind.config.ts). */
 :root {
   --ground: 16 18 20; /* #101214 app background, graph canvas */
   --surface: 23 26 29; /* #171A1D toolbar and sidebar */
@@ -50,7 +52,6 @@ body {
   /* Surfaces */
   .panel {
     background-color: rgb(var(--surface));
-    border: 1px solid rgb(var(--line));
   }
   .popover {
     background-color: rgb(var(--raised));
@@ -59,11 +60,9 @@ body {
   }
   .inset {
     background-color: rgb(var(--raised));
-    border: 1px solid rgb(var(--line));
   }
   .code-surface {
     background-color: rgb(var(--ground));
-    border: 1px solid rgb(var(--line));
   }
 
   /* Controls */
@@ -127,7 +126,6 @@ body {
   }
   .segmented {
     background-color: rgb(var(--ground));
-    border: 1px solid rgb(var(--line));
   }
   .segmented > button[aria-pressed="true"],
   .segmented > a[aria-current="page"] {
@@ -157,7 +155,6 @@ body {
   position: static !important;
   margin: 0 !important;
   background: rgb(var(--surface)) !important;
-  border: 1px solid rgb(var(--line));
   border-radius: 8px;
   overflow: hidden;
 }

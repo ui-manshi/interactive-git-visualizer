@@ -40,7 +40,7 @@ export default function ShortcutsHelp({ open, onClose }: { open: boolean; onClos
         className="popover rounded-lg w-full max-w-md p-5"
       >
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-xl">Keyboard shortcuts</h2>
+          <h2 className="font-semibold text-lg">Keyboard shortcuts</h2>
           <button
             ref={closeRef}
             onClick={onClose}

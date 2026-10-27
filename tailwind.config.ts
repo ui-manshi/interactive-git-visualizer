@@ -30,6 +30,15 @@ const config: Config = {
         sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
         mono: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
+      // One type scale for every screen: 11 meta / 12 secondary / 13 body / 15 heading / 20 figure.
+      // (3xl and 4xl remain only for the landing-page title.)
+      fontSize: {
+        "2xs": ["11px", "16px"],
+        xs: ["12px", "16px"],
+        sm: ["13px", "20px"],
+        lg: ["15px", "22px"],
+        xl: ["20px", "28px"],
+      },
       transitionDuration: { DEFAULT: "150ms" },
     },
   },

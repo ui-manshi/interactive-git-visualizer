@@ -66,7 +66,7 @@ export function BlameView({
 
   return (
     <div>
-      <p className="px-3 py-2 text-xs text-muted border-b border-line m-0">
+      <p className="px-3 py-2 text-xs text-muted m-0">
         {data.lines.length} lines from {data.commits.length} commit{data.commits.length === 1 ? "" : "s"}. Each
         block shows the commit that last changed those lines.
         {data.approximate && " Some diffs were too large to align exactly, so a few lines may be attributed to a later commit."}
@@ -96,7 +96,7 @@ export function BlameView({
                       </span>
                     </div>
                   )}
-                  {start && <div className="text-[10px] text-faint font-sans">{ago(c.timestamp)}</div>}
+                  {start && <div className="text-2xs text-faint font-sans">{ago(c.timestamp)}</div>}
                 </td>
                 <td className="w-10 pr-2 text-right text-faint select-none align-top">{i + 1}</td>
                 <td className="whitespace-pre-wrap break-all text-fg pr-2 align-top">{l.text || " "}</td>
@@ -157,7 +157,7 @@ export function FileHistoryView({
 
   return (
     <div>
-      <div className="px-3 py-2 border-b border-line flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-muted m-0">
           {data.totalChanges} commit{data.totalChanges === 1 ? "" : "s"} changed this file
           {data.truncated && " (history scan stopped early)"}. Renames are not followed.
@@ -181,12 +181,12 @@ export function FileHistoryView({
                 onClick={() => onGoToCommit?.(c.hash)}
                 className="w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-raised border-b border-white/[0.06]"
               >
-                <span className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded text-[10px] font-bold flex items-center justify-center ${st.cls}`} title={c.status}>
+                <span className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded text-2xs font-bold flex items-center justify-center ${st.cls}`} title={c.status}>
                   {st.letter}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] text-fg truncate">{c.message}</span>
-                  <span className="block text-[11px] text-muted truncate">
+                  <span className="block text-sm text-fg truncate">{c.message}</span>
+                  <span className="block text-2xs text-muted truncate">
                     <span className="font-mono text-accent">{c.hash.slice(0, 7)}</span> · {c.author} · {ago(c.timestamp)}
                   </span>
                 </span>

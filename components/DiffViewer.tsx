@@ -125,7 +125,7 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-[13px] text-fg m-0">
+        <p className="text-sm text-fg m-0">
           {summary.totalFiles} file{summary.totalFiles === 1 ? "" : "s"} changed{" "}
           <span className="font-mono text-xs text-add">+{summary.additions}</span>{" "}
           <span className="font-mono text-xs text-del">−{summary.deletions}</span>
@@ -167,7 +167,7 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
                 } ${expandable ? "hover:brightness-110 cursor-pointer" : "cursor-default"}`}
               >
                 <span
-                  className={`text-[10px] font-bold w-[18px] h-[18px] mt-px flex items-center justify-center rounded flex-none ${st.cls}`}
+                  className={`text-2xs font-bold w-[18px] h-[18px] mt-px flex items-center justify-center rounded flex-none ${st.cls}`}
                   title={f.status}
                   aria-label={f.status}
                 >
@@ -177,7 +177,7 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
                   <span className="text-faint">{dir}</span>
                   <span className="text-fg font-medium">{name}</span>
                 </span>
-                <span className="text-[11px] leading-5 flex-none font-mono">
+                <span className="text-2xs leading-5 flex-none font-mono">
                   {f.binary && <span className="text-muted">binary</span>}
                   {f.submodule && <span className="text-muted">submodule</span>}
                   {f.modeOnly && <span className="text-muted">mode change</span>}
@@ -245,7 +245,7 @@ function HunkTable({ diff, mode, lang }: { diff: FileDiff; mode: DiffMode; lang:
   return (
     <div>
       {diff.approximate && (
-        <p className="px-3 py-1.5 text-[11px] text-warn bg-warn/10 m-0">
+        <p className="px-3 py-1.5 text-2xs text-warn bg-warn/10 m-0">
           This change is very large, so the whole changed region is shown as replaced rather than
           minimally diffed.
         </p>
@@ -300,7 +300,7 @@ function HunkRows({ hunk, lang }: { hunk: Hunk; lang: Lang | null }) {
             </td>
             <td className="whitespace-pre text-fg pr-3">
               <Code text={text} lang={lang} />
-              {noEol && <span className="ml-2 text-[10px] text-warn select-none">⏎ no newline at end of file</span>}
+              {noEol && <span className="ml-2 text-2xs text-warn select-none">⏎ no newline at end of file</span>}
             </td>
           </tr>
         );
@@ -356,7 +356,7 @@ function SplitHunkRows({ hunk, lang }: { hunk: Hunk; lang: Lang | null }) {
         <td className={`whitespace-pre-wrap break-all text-fg pr-2 align-top ${bg} ${side === "l" ? "border-r border-line" : ""}`}>
           <span className={`select-none inline-block w-3 ${signCls}`}>{sign}</span>
           <Code text={text} lang={lang} />
-          {noEol && <span className="ml-2 text-[10px] text-warn select-none">⏎ no newline at end of file</span>}
+          {noEol && <span className="ml-2 text-2xs text-warn select-none">⏎ no newline at end of file</span>}
         </td>
       </>
     );

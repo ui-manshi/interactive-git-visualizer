@@ -655,12 +655,12 @@ function VisualizerContent() {
         <Brand compact />
         <ToolbarDivider />
         <div className="flex items-center gap-2 min-w-0 flex-1" aria-live="polite">
-          <span className="text-[13px] font-medium truncate min-w-0" title={repoPath}>
+          <span className="text-sm font-medium truncate min-w-0" title={repoPath}>
             {loading ? "Reading repository…" : error ? "Could not open this repository" : repoName}
           </span>
           {ready && head && (
             <span
-              className="flex-none hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md border border-line text-xs text-muted"
+              className="flex-none hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-raised text-xs text-muted"
               title={head.branch ? `Checked out: ${head.branch}` : `HEAD is detached at ${head.hash}`}
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
@@ -676,7 +676,7 @@ function VisualizerContent() {
 
         {ready && (
           <>
-            <div role="group" aria-label="View" className="segmented flex text-[13px] rounded-md overflow-hidden flex-none">
+            <div role="group" aria-label="View" className="segmented flex text-sm rounded-md overflow-hidden flex-none">
               {(["graph", "stats"] as View[]).map((v) => (
                 <button
                   key={v}
@@ -693,7 +693,7 @@ function VisualizerContent() {
               onClick={toggleCompareMode}
               aria-pressed={compareMode}
               title="Compare two commits (m)"
-              className={`${compareMode ? "border border-accent text-accent bg-accent/10" : "btn"} h-8 px-2.5 rounded-md text-[13px] inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
+              className={`${compareMode ? "border border-accent text-accent bg-accent/10" : "btn"} h-8 px-2.5 rounded-md text-sm inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M4 2.5v8M4 10.5a2 2 0 1 0 0 3 2 2 0 0 0 0-3ZM12 13.5v-8M12 5.5a2 2 0 1 0 0-3 2 2 0 0 0 0 3Z" />
@@ -705,19 +705,19 @@ function VisualizerContent() {
 
         {/* Secondary actions: quiet and inline when there is room, one overflow menu otherwise. */}
         <div className="hidden xl:flex items-center gap-0.5 flex-none">
-          <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-[13px] inline-flex items-center">
+          <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-sm inline-flex items-center">
             Simulator
           </Link>
-          <Link href="/" className="btn-ghost h-8 px-2.5 rounded-md text-[13px] inline-flex items-center">
+          <Link href="/" className="btn-ghost h-8 px-2.5 rounded-md text-sm inline-flex items-center">
             New repository
           </Link>
           {ready && (
             <>
-              <button onClick={copyLink} className="btn-ghost h-8 px-2.5 rounded-md text-[13px]" title="Copy a link to this exact view">
+              <button onClick={copyLink} className="btn-ghost h-8 px-2.5 rounded-md text-sm" title="Copy a link to this exact view">
                 {linkCopied ? "Link copied" : "Copy link"}
               </button>
               <IconButton label="Keyboard shortcuts (?)" onClick={() => setHelpOpen(true)}>
-                <span className="text-[13px] font-semibold">?</span>
+                <span className="text-sm font-semibold">?</span>
               </IconButton>
             </>
           )}
@@ -743,7 +743,7 @@ function VisualizerContent() {
         <nav
           id="repo-sidebar"
           aria-label="Repository"
-          className={`flex-none flex-col bg-surface border-r border-line min-h-0 w-[264px] ${
+          className={`flex-none flex-col bg-surface min-h-0 w-[264px] ${
             sidebarVisibleDesktop ? "xl:flex" : "xl:hidden"
           } ${
             drawerOpen
@@ -751,13 +751,13 @@ function VisualizerContent() {
               : "max-xl:hidden"
           }`}
         >
-          <div className="flex-none px-3 py-3 border-b border-line">
-            <p className="text-[11px] text-faint m-0">Repository</p>
+          <div className="flex-none px-3 pt-3 pb-4">
+            <p className="text-2xs text-faint m-0">Repository</p>
             <p className="text-sm font-semibold m-0 mt-0.5 break-words" title={repoPath}>
               {repoName}
             </p>
             {repoPath && (
-              <p className="font-mono text-[11px] text-faint m-0 mt-0.5 truncate" title={repoPath}>
+              <p className="font-mono text-2xs text-faint m-0 mt-0.5 truncate" title={repoPath}>
                 {repoPath}
               </p>
             )}
@@ -768,7 +768,7 @@ function VisualizerContent() {
               </p>
             )}
             {graph?.truncated && (
-              <div className="mt-2 text-[11px] space-y-1.5">
+              <div className="mt-2 text-2xs space-y-1.5">
                 <p className="text-warn m-0">
                   Showing the newest {nodeCount.toLocaleString()} of {graph.totalCommits.toLocaleString()} commits.
                 </p>
@@ -837,13 +837,13 @@ function VisualizerContent() {
                           ? `${t.annotated ? "Annotated tag" : "Tag"} ${t.name}${t.message ? `: ${t.message}` : ""}`
                           : "This commit is older than the history loaded so far"
                       }
-                      className="w-full text-left flex items-center gap-2 h-7 px-3 text-[13px] hover:bg-raised disabled:opacity-40 disabled:hover:bg-transparent"
+                      className="w-full text-left flex items-center gap-2 h-7 px-3 text-sm hover:bg-raised disabled:opacity-40 disabled:hover:bg-transparent"
                     >
                       <span className={`flex-none ${isReleaseTag(t.name) ? "text-warn" : "text-faint"}`}>
                         <FlagIcon size={12} />
                       </span>
                       <span className="truncate flex-1 min-w-0">{t.name}</span>
-                      <span className="font-mono text-[11px] text-faint flex-none">{t.hash.slice(0, 7)}</span>
+                      <span className="font-mono text-2xs text-faint flex-none">{t.hash.slice(0, 7)}</span>
                     </button>
                   );
                 })}
@@ -852,9 +852,9 @@ function VisualizerContent() {
           </div>
 
           {/* Fixed footer: comparison controls and legend never overlap the list above. */}
-          <div className="flex-none border-t border-line">
+          <div className="flex-none pt-1">
             {refs.length >= 2 && (
-              <details open className="group border-b border-line">
+              <details open className="group">
                 <summary className="h-8 px-3 flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none hover:text-fg list-none [&::-webkit-details-marker]:hidden">
                   <svg className="transition-transform group-open:rotate-90" width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
                     <path d="M3 1.5 7 5 3 8.5z" />
@@ -893,7 +893,7 @@ function VisualizerContent() {
                 </div>
               </details>
             )}
-            <div className="px-3 py-2.5 text-[11px] text-faint space-y-1.5" aria-label="Legend">
+            <div className="px-3 py-2.5 text-2xs text-faint space-y-1.5" aria-label="Legend">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-muted" aria-hidden /> commit
@@ -903,9 +903,9 @@ function VisualizerContent() {
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="px-1.5 rounded text-[10px] font-semibold bg-muted text-ground">checked out</span>
-                <span className="px-1.5 rounded text-[10px] border border-muted/50 text-muted bg-muted/10">local</span>
-                <span className="px-1.5 rounded text-[10px] border border-dashed border-muted/60 text-muted">remote</span>
+                <span className="px-1.5 rounded text-2xs font-semibold bg-muted text-ground">checked out</span>
+                <span className="px-1.5 rounded text-2xs border border-muted/50 text-muted bg-muted/10">local</span>
+                <span className="px-1.5 rounded text-2xs border border-dashed border-muted/60 text-muted">remote</span>
               </div>
               <p className="m-0">Newest at the top. Colour follows the branch.</p>
             </div>
@@ -971,7 +971,7 @@ function VisualizerContent() {
                 inputRef={searchRef}
               />
               {compareMode && !comparing && (
-                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-xs bg-accent/10 border-b border-line text-fg" role="status">
+                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-xs bg-accent/10 text-fg" role="status">
                   {selectedHash ? (
                     <>
                       Base is <span className="font-mono text-accent">{selectedHash.slice(0, 7)}</span>. Now click the commit to compare it with.
@@ -982,7 +982,7 @@ function VisualizerContent() {
                 </div>
               )}
               {fileSet && (
-                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-xs bg-raised border-b border-line text-fg" role="status">
+                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-xs bg-raised text-fg" role="status">
                   <span className="min-w-0 truncate">
                     Highlighting commits that changed <span className="font-mono text-accent">{fileSet.file}</span>
                   </span>
@@ -992,7 +992,7 @@ function VisualizerContent() {
                 </div>
               )}
               {loadingMore && (
-                <div className="flex-none px-3 min-h-8 flex items-center text-xs text-muted bg-raised border-b border-line" role="status">
+                <div className="flex-none px-3 min-h-8 flex items-center text-xs text-muted bg-raised" role="status">
                   Loading more commits…
                 </div>
               )}
@@ -1037,7 +1037,7 @@ function VisualizerContent() {
         {panelOpen && (
           <aside
             aria-label="Commit inspector"
-            className="flex-none relative flex flex-col min-h-0 bg-surface border-l border-line max-lg:fixed max-lg:right-0 max-lg:top-12 max-lg:bottom-0 max-lg:z-40 max-lg:!w-[min(34rem,100vw)] lg:max-w-[calc(100%-380px)] xl:max-w-[calc(100%-var(--sb)-380px)]"
+            className="flex-none relative flex flex-col min-h-0 bg-surface max-lg:fixed max-lg:right-0 max-lg:top-12 max-lg:bottom-0 max-lg:z-40 max-lg:!w-[min(34rem,100vw)] lg:max-w-[calc(100%-380px)] xl:max-w-[calc(100%-var(--sb)-380px)]"
             style={{
               width: inspectorW,
               minWidth: INSPECTOR_MIN_W,
@@ -1097,7 +1097,7 @@ function VisualizerContent() {
                     </div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-[15px] font-semibold leading-snug m-0 break-words line-clamp-4" title={subject}>
+                      <h2 className="text-lg font-semibold leading-snug m-0 break-words line-clamp-4" title={subject}>
                         {selectedCommit ? subject || "(no message)" : "Loading commit…"}
                       </h2>
                       <div className="mt-1 flex items-center gap-1 text-xs text-muted min-w-0">
@@ -1124,14 +1124,14 @@ function VisualizerContent() {
                   </div>
                 </div>
 
-                <div role="tablist" aria-label="Inspector views" className="flex-none px-3 flex gap-0.5 border-b border-line">
+                <div role="tablist" aria-label="Inspector views" className="flex-none px-3 flex gap-0.5">
                   {TABS.map((t) => (
                     <button
                       key={t}
                       role="tab"
                       aria-selected={tab === t}
                       onClick={() => setTab(t)}
-                      className={`px-2.5 h-9 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+                      className={`px-2.5 h-9 text-sm font-medium border-b-2 -mb-px transition-colors ${
                         tab === t ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg"
                       }`}
                     >
@@ -1148,7 +1148,7 @@ function VisualizerContent() {
                       {selectedCommit && (
                         <div className="space-y-5">
                           {showFullMessage && (
-                            <pre className="inset whitespace-pre-wrap break-words font-sans text-[13px] text-fg leading-relaxed rounded-lg p-3 m-0 max-h-72 overflow-y-auto">
+                            <pre className="inset whitespace-pre-wrap break-words font-sans text-sm text-fg leading-relaxed rounded-lg p-3 m-0 max-h-72 overflow-y-auto">
                               {bodyText}
                             </pre>
                           )}
@@ -1270,7 +1270,7 @@ function VisualizerContent() {
 function RefSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <section aria-label={title} className="pb-1">
-      <h3 className="sticky top-0 z-10 bg-surface px-3 h-7 flex items-center justify-between text-[11px] font-medium text-faint m-0">
+      <h3 className="sticky top-0 z-10 bg-surface px-3 h-7 flex items-center justify-between text-2xs font-medium text-faint m-0">
         <span>{title}</span>
         <span className="tabular-nums">{count}</span>
       </h3>
@@ -1304,7 +1304,7 @@ function RefRow({
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       title={`${ref_.name} @ ${ref_.hash}${isHead ? " (checked out)" : ""}`}
-      className={`w-full text-left flex items-center gap-2 h-7 px-3 text-[13px] hover:bg-raised ${
+      className={`w-full text-left flex items-center gap-2 h-7 px-3 text-sm hover:bg-raised ${
         selected ? "bg-raised shadow-[inset_2px_0_0_rgb(var(--accent))]" : ""
       }`}
     >
@@ -1318,9 +1318,9 @@ function RefRow({
         {rest}
       </span>
       {isHead && (
-        <span className="flex-none text-[10px] font-semibold px-1 rounded border border-line text-muted leading-4">HEAD</span>
+        <span className="flex-none text-2xs font-semibold px-1 rounded border border-line text-muted leading-4">HEAD</span>
       )}
-      <span className="font-mono text-[11px] text-faint flex-none">{ref_.hash.slice(0, 7)}</span>
+      <span className="font-mono text-2xs text-faint flex-none">{ref_.hash.slice(0, 7)}</span>
     </button>
   );
 }

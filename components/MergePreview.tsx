@@ -126,7 +126,7 @@ export default function MergePreview({
         <p className="text-xs text-muted m-0">Showing {data.files.length} of {data.totalFiles} files.</p>
       )}
 
-      <p className="text-[11px] text-muted m-0 leading-relaxed">
+      <p className="text-2xs text-muted m-0 leading-relaxed">
         This is a line-based three-way merge against the merge base
         {data.mergeBase && data.mergeBase.candidates > 1 ? ` (the most recent of ${data.mergeBase.candidates} candidates)` : ""}.
         Unlike Git, it does not detect renamed files, so a file renamed on one side and edited on the other appears as two separate changes.
@@ -139,10 +139,10 @@ function FileCard({ file, base, head }: { file: FilePreview; base: string; head:
   const st = OUTCOME[file.outcome];
   const body = (
     <div className="flex items-start gap-2 min-w-0">
-      <span className={`mt-0.5 flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${st.cls}`}>{st.label}</span>
+      <span className={`mt-0.5 flex-shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded ${st.cls}`}>{st.label}</span>
       <span className="min-w-0">
         <span className="block font-mono text-xs text-fg break-all">{file.path}</span>
-        <span className="block text-[11px] text-muted">{file.detail}</span>
+        <span className="block text-2xs text-muted">{file.detail}</span>
       </span>
     </div>
   );
@@ -154,7 +154,7 @@ function FileCard({ file, base, head }: { file: FilePreview; base: string; head:
   return (
     <details open={file.outcome === "conflict"} className="rounded-lg inset group">
       <summary className="p-2.5 cursor-pointer list-none">{body}</summary>
-      <div className="border-t border-line bg-ground/60 p-2 overflow-x-auto font-mono text-[11px] leading-relaxed">
+      <div className="border-t border-line bg-ground/60 p-2 overflow-x-auto font-mono text-2xs leading-relaxed">
         {file.segments.map((seg, i) => {
           if (seg.type === "skip") {
             return (

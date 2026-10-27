@@ -88,7 +88,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
     <div className="flex flex-col min-h-0 h-full">
       <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3 flex-shrink-0">
         <div className="min-w-0">
-          <h2 className="font-semibold text-base leading-snug m-0">Compare branches</h2>
+          <h2 className="font-semibold text-lg leading-snug m-0">Compare branches</h2>
           <p className="text-xs text-muted mt-1 m-0 flex items-center gap-1.5 flex-wrap">
             <span className="font-mono text-fg">{base.name}</span>
             <button onClick={onSwap} className="hover:text-fg px-1 rounded" title="Swap sides" aria-label="Swap sides">
@@ -102,7 +102,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
         </button>
       </div>
 
-      <div role="tablist" className="px-4 flex gap-1 border-b border-line flex-shrink-0">
+      <div role="tablist" className="px-4 flex gap-1 flex-shrink-0">
         {(
           [
             ["overview", "Overview"],
@@ -139,7 +139,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
               <Stat label={`Ahead (${head.name})`} value={data.ahead.count} color="rgb(var(--accent))" />
               <Stat label={`Behind (${base.name})`} value={data.behind.count} color="rgb(var(--violet))" />
               <div className="rounded-lg inset p-2.5">
-                <p className="text-[11px] text-muted m-0">Merge base</p>
+                <p className="text-2xs text-muted m-0">Merge base</p>
                 {data.mergeBase ? (
                   <button
                     onClick={() => onGoToCommit(data.mergeBase!.hash)}
@@ -151,7 +151,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
                 ) : (
                   <p className="text-muted mt-1 m-0">none</p>
                 )}
-                {data.mergeBaseCount > 1 && <p className="text-[10px] text-muted m-0">{data.mergeBaseCount} candidates</p>}
+                {data.mergeBaseCount > 1 && <p className="text-2xs text-muted m-0">{data.mergeBaseCount} candidates</p>}
               </div>
             </div>
 
@@ -186,10 +186,10 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="rounded-lg inset p-2.5">
-      <p className="text-[11px] text-muted m-0 truncate" title={label}>
+      <p className="text-2xs text-muted m-0 truncate" title={label}>
         {label}
       </p>
-      <p className="font-semibold text-2xl m-0 mt-0.5" style={{ color, textShadow: `0 0 12px ${color}` }}>
+      <p className="font-semibold text-xl m-0 mt-0.5" style={{ color }}>
         {value.toLocaleString()}
       </p>
     </div>
@@ -217,8 +217,8 @@ function CommitList({
         {commits.map((c) => (
           <li key={c.hash} className="border-b border-white/[0.07] last:border-b-0">
             <button onClick={() => onGoToCommit(c.hash)} className="w-full text-left px-2.5 py-1.5 hover:bg-raised">
-              <span className="block text-[13px] text-fg truncate">{c.message}</span>
-              <span className="block text-[11px] text-muted truncate">
+              <span className="block text-sm text-fg truncate">{c.message}</span>
+              <span className="block text-2xs text-muted truncate">
                 <span className="font-mono text-accent">{c.hash.slice(0, 7)}</span> · {c.author} ·{" "}
                 {new Date(c.timestamp * 1000).toLocaleDateString()}
               </span>
@@ -226,7 +226,7 @@ function CommitList({
           </li>
         ))}
       </ul>
-      {total > commits.length && <p className="text-[11px] text-muted mt-1 m-0">Showing the newest {commits.length}.</p>}
+      {total > commits.length && <p className="text-2xs text-muted mt-1 m-0">Showing the newest {commits.length}.</p>}
     </section>
   );
 }
@@ -238,11 +238,11 @@ function FileList({ title, files, total, note }: { title: string; files: string[
       <p className="text-xs text-fg m-0">
         {title} <span className="text-muted">({total.toLocaleString()})</span>
       </p>
-      {note && <p className="text-[11px] text-muted m-0 mt-0.5">{note}</p>}
+      {note && <p className="text-2xs text-muted m-0 mt-0.5">{note}</p>}
       {total === 0 ? (
-        <p className="text-[11px] text-muted m-0 mt-1">No file changes.</p>
+        <p className="text-2xs text-muted m-0 mt-1">No file changes.</p>
       ) : (
-        <ul className="m-0 mt-1 p-0 list-none font-mono text-[11px] text-fg/90 space-y-0.5">
+        <ul className="m-0 mt-1 p-0 list-none font-mono text-2xs text-fg/90 space-y-0.5">
           {shown.map((f) => (
             <li key={f} className="break-all">
               {f}

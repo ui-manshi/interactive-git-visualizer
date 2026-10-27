@@ -21,7 +21,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
 
   return (
     <div
-      className="flex-none bg-surface border-t border-line px-3 h-11 flex items-center gap-3 min-w-0"
+      className="flex-none bg-surface px-3 h-11 flex items-center gap-3 min-w-0"
       role="group"
       aria-label="Time travel"
     >
@@ -78,7 +78,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
             key={s}
             onClick={() => onSpeed(s)}
             aria-pressed={speed === s}
-            className={`text-[11px] px-1.5 h-6 rounded border tabular-nums ${
+            className={`text-2xs px-1.5 h-6 rounded border tabular-nums ${
               speed === s ? "border-accent bg-accent/10 text-accent" : "btn text-muted hover:text-fg"
             }`}
           >
@@ -88,7 +88,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
         {active && (
           <button
             onClick={() => onChange(null)}
-            className="text-[11px] px-2 h-6 rounded btn text-fg ml-1"
+            className="text-2xs px-2 h-6 rounded btn text-fg ml-1"
           >
             Latest
           </button>

@@ -14,7 +14,9 @@ export interface EdgeData {
   width: number;
 }
 
-const CORNER = 8;
+const CORNER = 10;
+/** Extra stroke width of the background-coloured underlay that opens a gap where two lines cross. */
+const HALO = 4;
 
 /**
  * Lane routing. Straight lines stay in their lane.
@@ -40,15 +42,13 @@ export default function CommitEdge({ data }: EdgeProps<EdgeData>) {
   const z = Math.max(zoomTenths, 1) / 10;
   // Keep lines at least ~1px on screen when zoomed far out.
   const width = Math.max(data.width, 1.1 / z);
+  const d = edgePath(data);
   return (
-    <path
-      d={edgePath(data)}
-      fill="none"
-      stroke={data.color}
-      strokeWidth={width}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      opacity={data.opacity}
-    />
+    <g opacity={data.opacity}>
+      {/* Underlay in the canvas colour: where this edge crosses another, the older one is cut
+          cleanly instead of the two colours blending into a knot. */}
+      <path d={d} fill="none" stroke="rgb(var(--ground))" strokeWidth={width + HALO} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={data.color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
+    </g>
   );
 }

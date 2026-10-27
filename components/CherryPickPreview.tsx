@@ -120,15 +120,15 @@ export default function CherryPickPreview({
             </p>
           </div>
           {result.data.step.conflictFiles.map((f, i) => (
-            <p key={f} className="text-[11px] font-mono text-del m-0 break-all">
+            <p key={f} className="text-2xs font-mono text-del m-0 break-all">
               {f} <span className="font-sans text-muted">({result.data.step.conflictReasons[i]})</span>
             </p>
           ))}
           {result.data.alreadyThere && (
-            <p className="text-[11px] text-warn m-0">This exact commit is already part of {result.target.name}&apos;s history.</p>
+            <p className="text-2xs text-warn m-0">This exact commit is already part of {result.target.name}&apos;s history.</p>
           )}
           <div className="rounded-lg code-surface p-1">{diagram}</div>
-          <p className="text-[11px] text-muted m-0">The copy X&apos; gets a new hash; the original X stays where it is.</p>
+          <p className="text-2xs text-muted m-0">The copy X&apos; gets a new hash; the original X stays where it is.</p>
         </div>
       )}
     </section>

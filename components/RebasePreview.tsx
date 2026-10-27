@@ -207,14 +207,14 @@ export default function RebasePreview({
           <li key={s.hash} className="px-2.5 py-2 border-b border-white/[0.07] last:border-b-0 flex items-start gap-2">
             <StatusChip status={s.status} />
             <span className="min-w-0">
-              <span className="block text-[13px] text-fg truncate">
+              <span className="block text-sm text-fg truncate">
                 {i + 1}. {s.message}
               </span>
-              <span className="block text-[11px] text-muted">
+              <span className="block text-2xs text-muted">
                 <span className="font-mono text-accent">{s.hash.slice(0, 7)}</span> · {s.filesChanged} file{s.filesChanged === 1 ? "" : "s"}
               </span>
               {s.conflictFiles.map((f, k) => (
-                <span key={f} className="block text-[11px] text-del font-mono break-all">
+                <span key={f} className="block text-2xs text-del font-mono break-all">
                   {f} <span className="font-sans text-muted">({s.conflictReasons[k]})</span>
                 </span>
               ))}
@@ -224,7 +224,7 @@ export default function RebasePreview({
       </ol>
       {data.truncated && <p className="text-xs text-warn m-0">Only the first {data.steps.length} of {data.totalToReplay} commits were simulated.</p>}
 
-      <p className="text-[11px] text-muted m-0 leading-relaxed">
+      <p className="text-2xs text-muted m-0 leading-relaxed">
         {data.mergeCommitsDropped > 0 && `${data.mergeCommitsDropped} merge commit${data.mergeCommitsDropped === 1 ? " is" : "s are"} not replayed, as in a plain git rebase. `}
         Git also skips commits whose changes are already on {base.name}; this preview does not detect that. Every replayed commit gets a new hash.
       </p>
@@ -247,5 +247,5 @@ export function StatusChip({ status }: { status: Step["status"] }) {
     conflict: { t: "Conflict", cls: "bg-del/20 text-del" },
     "not-attempted": { t: "Not reached", cls: "bg-raised text-muted" },
   }[status];
-  return <span className={`mt-0.5 flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${map.cls}`}>{map.t}</span>;
+  return <span className={`mt-0.5 flex-shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded ${map.cls}`}>{map.t}</span>;
 }

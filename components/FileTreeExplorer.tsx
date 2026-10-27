@@ -165,19 +165,19 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
       <div key={node.path}>
         <button
           onClick={() => (isDir ? toggle(node.path) : setOpenFile(node.file!))}
-          className={`w-full text-left flex items-center gap-1.5 py-0.5 pr-2 text-[13px] rounded hover:bg-raised transition-colors ${
+          className={`w-full text-left flex items-center gap-1.5 py-0.5 pr-2 text-sm rounded hover:bg-raised transition-colors ${
             isSelected ? "bg-accent/15 text-fg" : "text-fg/90"
           }`}
           style={{ paddingLeft: depth * 14 + 6 }}
           title={node.path}
         >
-          <span className="w-3 text-muted text-[10px] flex-shrink-0">
+          <span className="w-3 text-muted text-2xs flex-shrink-0">
             {isDir ? (isOpen ? "▾" : "▸") : ""}
           </span>
           <NodeIcon kind={isDir ? (isOpen ? "folder-open" : "folder") : node.file?.isSubmodule ? "link" : "file"} />
           <span className="truncate">{node.name}</span>
           {node.file?.mode === "100755" && (
-            <span className="text-[10px] text-muted flex-shrink-0">executable</span>
+            <span className="text-2xs text-muted flex-shrink-0">executable</span>
           )}
         </button>
         {isDir && isOpen && sortedChildren(node).map((c) => renderNode(c, depth + 1))}
@@ -211,7 +211,7 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
             </span>
             <div className="flex items-center gap-2 flex-shrink-0">
               {!openFile.isSubmodule && (
-                <div role="group" aria-label="File view" className="flex text-[11px] rounded segmented overflow-hidden">
+                <div role="group" aria-label="File view" className="flex text-2xs rounded segmented overflow-hidden">
                   {(["content", "blame", "history"] as FileView[]).map((v) => (
                     <button
                       key={v}
@@ -225,7 +225,7 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
                 </div>
               )}
               {blob && fileView === "content" && (
-                <span className="text-[11px] text-muted">{formatBytes(blob.size)}</span>
+                <span className="text-2xs text-muted">{formatBytes(blob.size)}</span>
               )}
             </div>
           </div>

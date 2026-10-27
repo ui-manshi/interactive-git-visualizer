@@ -144,7 +144,7 @@ export default function ObjectInspector({ repoPath, rootHash }: Props) {
               sha1(<span className="text-accent">&quot;{data.header}&quot;</span> + <span className="text-warn">NUL</span> +{" "}
               <span className="text-fg">{data.type} content</span>)
             </p>
-            <p className="text-[11px] text-muted mt-1.5 m-0">
+            <p className="text-2xs text-muted mt-1.5 m-0">
               Git hashes the header and the content together, so the same content always gets the same ID.
             </p>
           </section>
@@ -219,7 +219,7 @@ export default function ObjectInspector({ repoPath, rootHash }: Props) {
               Raw bytes that get hashed (first {data.hexBytesShown} of {data.hexTotalBytes.toLocaleString()})
             </p>
             <div className="rounded-lg code-surface p-3 overflow-x-auto">
-              <table className="text-[11px] font-mono border-collapse">
+              <table className="text-2xs font-mono border-collapse">
                 <tbody>
                   {data.hexRows.map((r) => (
                     <tr key={r.offset}>
@@ -231,7 +231,7 @@ export default function ObjectInspector({ repoPath, rootHash }: Props) {
                 </tbody>
               </table>
             </div>
-            <p className="text-[11px] text-muted mt-1.5 m-0">
+            <p className="text-2xs text-muted mt-1.5 m-0">
               The header is followed by a zero byte (00), then the content.
             </p>
           </section>
@@ -276,7 +276,7 @@ function PackSection({ pack, size, onOpen }: { pack: PackInfo; size: number; onO
       </p>
 
       {isDelta && (
-        <ol className="m-0 p-0 list-none text-[11px] font-mono space-y-1">
+        <ol className="m-0 p-0 list-none text-2xs font-mono space-y-1">
           {pack.chain.map((step, i) => {
             const last = i === pack.chain.length - 1;
             return (
@@ -296,7 +296,7 @@ function PackSection({ pack, size, onOpen }: { pack: PackInfo; size: number; onO
           })}
         </ol>
       )}
-      {pack.truncated && <p className="text-[11px] text-warn m-0">A delta base could not be found in any pack.</p>}
+      {pack.truncated && <p className="text-2xs text-warn m-0">A delta base could not be found in any pack.</p>}
     </section>
   );
 }

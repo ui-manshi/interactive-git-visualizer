@@ -32,7 +32,7 @@ export default function FilterBar({
   const [open, setOpen] = useState(extrasCount > 0);
 
   return (
-    <div role="search" className="flex-none bg-surface border-b border-line px-3 py-2 space-y-2">
+    <div role="search" className="flex-none bg-surface px-3 py-2 space-y-2">
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
@@ -69,7 +69,7 @@ export default function FilterBar({
               type="button"
               onClick={() => onStep(-1)}
               disabled={!matchCount}
-              className="w-7 h-7 rounded-md btn text-fg text-[10px]"
+              className="w-7 h-7 rounded-md btn text-fg text-2xs"
               aria-label="Previous match"
               title="Previous match (Shift+Enter)"
             >
@@ -79,7 +79,7 @@ export default function FilterBar({
               type="button"
               onClick={() => onStep(1)}
               disabled={!matchCount}
-              className="w-7 h-7 rounded-md btn text-fg text-[10px]"
+              className="w-7 h-7 rounded-md btn text-fg text-2xs"
               aria-label="Next match"
               title="Next match (Enter)"
             >

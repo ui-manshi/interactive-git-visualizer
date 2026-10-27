@@ -9,7 +9,7 @@ export function Toolbar({ children, label = "Application" }: { children: ReactNo
     <header
       role="banner"
       aria-label={label}
-      className="flex-none h-12 flex items-center gap-2 px-3 bg-surface border-b border-line min-w-0"
+      className="flex-none h-12 flex items-center gap-2 px-3 bg-surface min-w-0"
     >
       {children}
     </header>
@@ -32,10 +32,10 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export function ToolbarDivider() {
-  return <span className="w-px h-5 bg-line flex-none mx-1" aria-hidden />;
+  return <span className="w-2 flex-none" aria-hidden />;
 }
 
-export const toolbarBtn = "h-8 px-2.5 rounded-md text-[13px] inline-flex items-center gap-1.5 whitespace-nowrap";
+export const toolbarBtn = "h-8 px-2.5 rounded-md text-sm inline-flex items-center gap-1.5 whitespace-nowrap";
 
 export function IconButton({
   label,
@@ -102,4 +102,4 @@ export function MoreMenu({ children, label = "More actions" }: { children: React
 }
 
 export const menuItem =
-  "w-full text-left h-8 px-2.5 rounded-md text-[13px] flex items-center gap-2 text-fg hover:bg-surface";
+  "w-full text-left h-8 px-2.5 rounded-md text-sm flex items-center gap-2 text-fg hover:bg-surface";

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { laneColor } from "./lanes";
 
 /**
@@ -45,14 +46,19 @@ const PAD_X = 36;
 const PAD_TOP = 58;
 const R = 17;
 
-// Reference labels read by fill, not only hue: HEAD is solid, branches are outlined,
+// Reference labels read by fill, not only hue: HEAD is solid ink (teal is reserved for actions), branches are outlined,
 // tags are amber with a flag, notes use the error colour.
 const TAG_STYLE: Record<DagTag["kind"], { fill: string; stroke: string; text: string }> = {
-  head: { fill: "rgb(var(--accent))", stroke: "rgb(var(--accent))", text: "rgb(var(--ground))" },
+  head: { fill: "rgb(var(--fg))", stroke: "rgb(var(--fg))", text: "rgb(var(--ground))" },
   branch: { fill: "rgb(var(--raised))", stroke: "rgb(var(--faint))", text: "rgb(var(--fg))" },
   tag: { fill: "transparent", stroke: "rgb(var(--warn))", text: "rgb(var(--warn))" },
   note: { fill: "transparent", stroke: "rgb(var(--del))", text: "rgb(var(--del))" },
 };
+
+const FIT_PAD = 20;
+/** In fit mode the diagram never grows past this, so a two-commit history is not blown up to poster size. */
+const FIT_MAX_SCALE = 1.35;
+const tagWidth = (text: string) => Math.max(34, text.length * 6.6 + 16);
 
 export default function DagView({
   nodes,
@@ -60,13 +66,33 @@ export default function DagView({
   tags = [],
   minLanes = 1,
   ariaLabel,
+  fit = false,
 }: {
   nodes: DagNode[];
   edges: DagEdge[];
   tags?: DagTag[];
   minLanes?: number;
   ariaLabel: string;
+  /**
+   * Crop to the real content and scale it to the space available (centred), instead of drawing at a
+   * fixed size from the top-left corner. Used by the simulator; the small before/after previews keep
+   * their natural size.
+   */
+  fit?: boolean;
 }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    if (!fit) return;
+    const el = boxRef.current;
+    if (!el) return;
+    const read = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fit]);
+
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const pos = (n: DagNode) => ({ x: PAD_X + n.col * COL_W, y: PAD_TOP + n.lane * LANE_H });
 
@@ -78,9 +104,46 @@ export default function DagView({
   // Tags stack upward from their commit.
   const stackCount = new Map<string, number>();
 
+  // Fit mode: the box that really contains the drawing (rings, hashes, the stack of labels above a commit).
+  let view = { x: 0, y: 0, w: width, h: height };
+  if (fit && nodes.length > 0) {
+    const stacks = new Map<string, number>();
+    for (const t of tags) stacks.set(t.nodeId, (stacks.get(t.nodeId) ?? 0) + 1);
+    let x0 = Infinity,
+      y0 = Infinity,
+      x1 = -Infinity,
+      y1 = -Infinity;
+    for (const n of nodes) {
+      const { x, y } = pos(n);
+      x0 = Math.min(x0, x - R);
+      x1 = Math.max(x1, x + R);
+      y0 = Math.min(y0, y - R - (stacks.get(n.id) ? 12 + 14 + (stacks.get(n.id)! - 1) * 22 + 18 - 14 : 0));
+      y1 = Math.max(y1, y + R + 20);
+    }
+    for (const t of tags) {
+      const n = byId.get(t.nodeId);
+      if (!n) continue;
+      const { x } = pos(n);
+      x0 = Math.min(x0, x - tagWidth(t.text) / 2);
+      x1 = Math.max(x1, x + tagWidth(t.text) / 2);
+    }
+    view = { x: x0 - FIT_PAD, y: y0 - FIT_PAD, w: x1 - x0 + 2 * FIT_PAD, h: y1 - y0 + 2 * FIT_PAD };
+  }
+  const k = fit && box.w > 0 && box.h > 0 ? Math.min(FIT_MAX_SCALE, box.w / view.w, box.h / view.h) : 1;
+
   return (
-    <div className="overflow-x-auto">
-      <svg width={width} height={height} role="img" aria-label={ariaLabel} className="block">
+    <div
+      ref={boxRef}
+      className={fit ? "w-full h-full flex items-center justify-center overflow-hidden" : "overflow-x-auto"}
+    >
+      <svg
+        width={fit ? view.w * k : width}
+        height={fit ? view.h * k : height}
+        viewBox={fit ? `${view.x} ${view.y} ${view.w} ${view.h}` : undefined}
+        role="img"
+        aria-label={ariaLabel}
+        className="block flex-none"
+      >
         <defs>
           <marker id="dag-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="context-stroke" />
@@ -132,7 +195,7 @@ export default function DagView({
                   …
                 </text>
                 {n.sub && (
-                  <text textAnchor="middle" y={R + 16} fontSize={10} fill="rgb(var(--muted))">
+                  <text textAnchor="middle" y={R + 16} fontSize={11} fill="rgb(var(--muted))">
                     {n.sub}
                   </text>
                 )}
@@ -157,12 +220,12 @@ export default function DagView({
                   </text>
                 )}
                 {n.status === "empty" && (
-                  <text textAnchor="middle" y={-R - 5} fontSize={9} fill="rgb(var(--muted))">
+                  <text textAnchor="middle" y={-R - 5} fontSize={11} fill="rgb(var(--muted))">
                     empty
                   </text>
                 )}
                 {n.sub && (
-                  <text textAnchor="middle" y={R + 16} fontSize={10} fill="rgb(var(--muted))" fontFamily='"JetBrains Mono", monospace'>
+                  <text textAnchor="middle" y={R + 16} fontSize={11} fill="rgb(var(--muted))" fontFamily='"JetBrains Mono", monospace'>
                     {n.sub}
                   </text>
                 )}
@@ -178,7 +241,7 @@ export default function DagView({
           const k = stackCount.get(t.nodeId) ?? 0;
           stackCount.set(t.nodeId, k + 1);
           const s = TAG_STYLE[t.kind];
-          const w = Math.max(34, t.text.length * 6.6 + 16);
+          const w = tagWidth(t.text);
           const ty = y - R - 12 - k * 22 - 14;
           return (
             <g key={`${t.nodeId}-${t.text}-${i}`} style={{ transform: `translate(${x}px, ${ty}px)`, transition: "transform 180ms ease" }}>
