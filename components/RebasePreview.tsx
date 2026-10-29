@@ -165,14 +165,14 @@ export default function RebasePreview({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted m-0">
+      <p className="text-body text-muted m-0">
         What <span className="font-mono text-fg">git rebase {base.name}</span> would do while on{" "}
         <span className="font-mono text-fg">{head.name}</span>: each of its commits is re-applied on top of{" "}
         <span className="font-mono text-fg">{base.name}</span>. Nothing is changed in your repository.
       </p>
 
       {stopStep ? (
-        <div className="rounded-lg border border-del/50 bg-del/10 p-3">
+        <div className="rounded-lg bg-del/10 p-3">
           <p className="m-0 font-semibold text-del">The rebase would stop at commit {data.stoppedAt + 1} of {data.totalToReplay}</p>
           <p className="m-0 mt-1 text-fg/90">
             &ldquo;{stopStep.message}&rdquo; conflicts in {stopStep.conflictFiles.length} file{stopStep.conflictFiles.length === 1 ? "" : "s"}. Git would
@@ -180,7 +180,7 @@ export default function RebasePreview({
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-add/50 bg-add/10 p-3">
+        <div className="rounded-lg bg-add/10 p-3">
           <p className="m-0 font-semibold text-add">All {applied} commit{applied === 1 ? "" : "s"} would replay without conflicts</p>
         </div>
       )}
@@ -188,13 +188,13 @@ export default function RebasePreview({
       {diagrams && (
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-muted m-0 mb-1">Before</p>
+            <p className="text-body text-muted m-0 mb-1">Before</p>
             <div className="rounded-lg code-surface p-1">
               <DagView {...diagrams.before} minLanes={2} ariaLabel={`Before rebase: ${head.name} branches off ${base.name}`} />
             </div>
           </div>
           <div>
-            <p className="text-xs text-muted m-0 mb-1">After (dashed commits are the originals, copied forward)</p>
+            <p className="text-body text-muted m-0 mb-1">After (dashed commits are the originals, copied forward)</p>
             <div className="rounded-lg code-surface p-1">
               <DagView {...diagrams.after} minLanes={2} ariaLabel={`After rebase: ${head.name} commits replayed on top of ${base.name}`} />
             </div>
@@ -204,17 +204,17 @@ export default function RebasePreview({
 
       <ol className="m-0 p-0 list-none rounded-lg inset overflow-hidden">
         {data.steps.map((s, i) => (
-          <li key={s.hash} className="px-2.5 py-2 border-b border-white/[0.07] last:border-b-0 flex items-start gap-2">
+          <li key={s.hash} className="px-2.5 py-2 flex items-start gap-2">
             <StatusChip status={s.status} />
             <span className="min-w-0">
-              <span className="block text-sm text-fg truncate">
+              <span className="block text-body text-fg truncate">
                 {i + 1}. {s.message}
               </span>
-              <span className="block text-2xs text-muted">
-                <span className="font-mono text-accent">{s.hash.slice(0, 7)}</span> · {s.filesChanged} file{s.filesChanged === 1 ? "" : "s"}
+              <span className="block text-caption text-muted">
+                <span className="font-mono text-fg">{s.hash.slice(0, 7)}</span> · {s.filesChanged} file{s.filesChanged === 1 ? "" : "s"}
               </span>
               {s.conflictFiles.map((f, k) => (
-                <span key={f} className="block text-2xs text-del font-mono break-all">
+                <span key={f} className="block text-caption text-del font-mono break-all">
                   {f} <span className="font-sans text-muted">({s.conflictReasons[k]})</span>
                 </span>
               ))}
@@ -222,9 +222,9 @@ export default function RebasePreview({
           </li>
         ))}
       </ol>
-      {data.truncated && <p className="text-xs text-warn m-0">Only the first {data.steps.length} of {data.totalToReplay} commits were simulated.</p>}
+      {data.truncated && <p className="text-body text-warn m-0">Only the first {data.steps.length} of {data.totalToReplay} commits were simulated.</p>}
 
-      <p className="text-2xs text-muted m-0 leading-relaxed">
+      <p className="text-caption text-muted m-0 leading-relaxed">
         {data.mergeCommitsDropped > 0 && `${data.mergeCommitsDropped} merge commit${data.mergeCommitsDropped === 1 ? " is" : "s are"} not replayed, as in a plain git rebase. `}
         Git also skips commits whose changes are already on {base.name}; this preview does not detect that. Every replayed commit gets a new hash.
       </p>
@@ -247,5 +247,5 @@ export function StatusChip({ status }: { status: Step["status"] }) {
     conflict: { t: "Conflict", cls: "bg-del/20 text-del" },
     "not-attempted": { t: "Not reached", cls: "bg-raised text-muted" },
   }[status];
-  return <span className={`mt-0.5 flex-shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded ${map.cls}`}>{map.t}</span>;
+  return <span className={`mt-0.5 flex-shrink-0 text-caption font-bold px-1.5 py-0.5 rounded ${map.cls}`}>{map.t}</span>;
 }

@@ -28,6 +28,9 @@ export default function SimulatorPage() {
   const [log, setLog] = useState<LogLine[]>([{ kind: "info", text: "Type a git command, or click a suggestion. Type help to see what is supported." }]);
   const [note, setNote] = useState<Explanation | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  // Recovery guidance opens by itself when a command orphans commits, and stays out of the way otherwise.
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [keyOpen, setKeyOpen] = useState(false);
   const [input, setInput] = useState("");
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx] = useState<number | null>(null);
@@ -56,7 +59,9 @@ export default function SimulatorPage() {
       if (changed) setUndoStack((u) => [...u, state]);
       setState(result.state);
     }
-    setNote(result.ok && result.note ? { text: result.note, recovery: recoveryFor(state, result.state) } : null);
+    const recovery = result.ok ? recoveryFor(state, result.state) : undefined;
+    setNote(result.ok && result.note ? { text: result.note, recovery } : null);
+    setRecoveryOpen(!!recovery);
     setCmdHistory((h) => [...h, text]);
     setHistIdx(null);
     setInput("");
@@ -78,6 +83,7 @@ export default function SimulatorPage() {
     setState(sc.build());
     setUndoStack([]);
     setNote(null);
+    setRecoveryOpen(false);
     setConfirmReset(false);
     setLog([{ kind: "info", text: sc.hint }]);
   }
@@ -144,7 +150,7 @@ export default function SimulatorPage() {
       <Toolbar label="Simulator">
         <Brand compact />
         <ToolbarDivider />
-        <h1 className="text-sm font-medium m-0 flex-none">Simulator</h1>
+        <h1 className="text-body font-medium m-0 flex-none">Simulator</h1>
         <span className="flex-1 min-w-0" />
         <label className="sr-only" htmlFor="scenario">
           Starting scenario
@@ -153,7 +159,7 @@ export default function SimulatorPage() {
           id="scenario"
           value={scenarioId}
           onChange={(e) => load(e.target.value)}
-          className="field rounded-md px-2 h-8 text-xs min-w-0 max-w-[11rem]"
+          className="field rounded-md px-2 h-8 text-body min-w-0 max-w-[11rem]"
         >
           {SCENARIOS.map((s) => (
             <option key={s.id} value={s.id}>
@@ -161,201 +167,193 @@ export default function SimulatorPage() {
             </option>
           ))}
         </select>
-        <button onClick={undo} disabled={undoStack.length === 0} className="btn text-xs px-3 h-8 rounded-md flex-none">
+        <button onClick={undo} disabled={undoStack.length === 0} className="btn text-body px-3 h-8 rounded-md flex-none">
           Undo
         </button>
         {confirmReset ? (
           <div role="group" aria-label="Confirm reset" className="flex items-center gap-1 flex-none">
-            <span className="hidden md:inline text-xs text-muted mr-1">
+            <span className="hidden md:inline text-body text-muted mr-1">
               Discard {loggedCommands} change{loggedCommands === 1 ? "" : "s"}?
             </span>
             <button
               onClick={() => load(scenarioId)}
-              className="text-xs px-3 h-8 rounded-md border border-del/60 text-del hover:bg-del/10"
+              className="text-body px-3 h-8 rounded-md border border-del/60 text-del hover:bg-del/10"
               autoFocus
             >
               Reset
             </button>
-            <button onClick={() => setConfirmReset(false)} className="btn text-xs px-3 h-8 rounded-md">
+            <button onClick={() => setConfirmReset(false)} className="btn text-body px-3 h-8 rounded-md">
               Keep
             </button>
           </div>
         ) : (
           <button
             onClick={() => (undoStack.length > 0 ? setConfirmReset(true) : load(scenarioId))}
-            className="btn text-xs px-3 h-8 rounded-md flex-none"
+            className="btn text-body px-3 h-8 rounded-md flex-none"
             title="Return to the starting scenario"
           >
             Reset
           </button>
         )}
-        <Link href="/" className="btn-ghost hidden md:inline-flex items-center h-8 px-2.5 rounded-md text-sm flex-none">
+        <Link href="/" className="btn-ghost hidden md:inline-flex items-center h-8 px-2.5 rounded-md text-body flex-none">
           Open a repository
         </Link>
       </Toolbar>
 
-      {/* One workbench: the graph and the terminal share the same ground; the terminal is a
-          single step lighter, so they read as two parts of one surface rather than two panels. */}
-      <div className="flex-1 min-h-0 grid lg:grid-cols-[minmax(0,1fr)_25rem] max-lg:overflow-y-auto max-lg:grid-rows-[minmax(22rem,1fr)_minmax(24rem,auto)]">
-        {/* ---- Graph and a compact, contextual explanation ---- */}
-        <section className="min-w-0 min-h-0 flex flex-col" aria-label="Repository state">
-          <div className="flex-1 min-h-[16rem] min-w-0">
-            {nodes.length === 0 ? (
-              <p className="text-muted text-sm p-6 m-0">The repository is empty. Run git commit to create the first commit.</p>
-            ) : (
-              <DagView fit nodes={nodes} edges={edges} tags={tags} minLanes={1} ariaLabel="Commit graph of the simulated repository" />
-            )}
-          </div>
-
-          <div className="flex-none px-6 pb-4 pt-1" aria-live="polite">
-            <p className="text-sm text-fg m-0 leading-relaxed max-w-[75ch] line-clamp-2" title={note?.text ?? scenario.hint}>
-              {note?.text ?? scenario.hint}
-            </p>
-            {note?.recovery && (
-              <details open className="mt-2 max-w-[75ch] group">
-                <summary className="cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-xs font-medium text-warn inline-flex items-center gap-1.5">
-                  <svg className="transition-transform group-open:rotate-90" width="9" height="9" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
-                    <path d="M3 1.5 7 5 3 8.5z" />
-                  </svg>
-                  How to recover
-                </summary>
-                <p className="text-xs text-fg/90 mt-1 mb-0 leading-relaxed max-h-28 overflow-y-auto pl-[15px]">{note.recovery}</p>
-              </details>
-            )}
-            <details className="mt-2 group">
-              <summary className="cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-2xs text-faint hover:text-muted inline-flex items-center gap-1.5">
-                <svg className="transition-transform group-open:rotate-90" width="8" height="8" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
-                  <path d="M3 1.5 7 5 3 8.5z" />
-                </svg>
-                Key{orphanCount > 0 ? ` · ${orphanCount} orphaned` : ""}
-              </summary>
-              <div className="text-2xs text-muted space-y-1.5 mt-2">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                  <span className="inline-flex items-center gap-1.5">
-                    <svg width="16" height="16" aria-hidden>
-                      <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgb(var(--muted))" strokeWidth="2" />
-                    </svg>
-                    commit
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <svg width="16" height="16" aria-hidden>
-                      <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgb(var(--muted))" strokeWidth="2" strokeDasharray="3 3" opacity="0.5" />
-                    </svg>
-                    orphaned: no branch or tag reaches it
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <svg width="24" height="10" aria-hidden>
-                      <line x1="1" y1="5" x2="23" y2="5" stroke="rgb(var(--warn))" strokeWidth="1.5" strokeDasharray="4 3" />
-                    </svg>
-                    copy made by rebase or cherry-pick
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="px-1.5 rounded text-2xs font-semibold bg-fg text-ground">HEAD → main</span> where new commits go
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="px-1.5 rounded text-2xs border border-faint bg-raised text-fg">topic</span> local branch
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="px-1.5 rounded text-2xs border border-warn text-warn">v1</span> tag
-                  </span>
-                </div>
-                <p className="m-0 text-faint max-w-[75ch]">
-                  The simulator tracks history only: no file contents, so no merge conflicts, and no remote branches. Use the merge and
-                  rebase previews on a real repository to see conflicts.
-                </p>
-              </div>
-            </details>
-          </div>
+      {/* One workbench: the graph and the terminal share a height; the status line and the prompt
+          share the bottom band, so a command and its explanation sit on the same level. */}
+      <div className="flex-1 min-h-0 grid lg:grid-cols-[minmax(0,1fr)_28rem] lg:grid-rows-[minmax(0,1fr)_auto] max-lg:overflow-y-auto max-lg:grid-rows-none">
+        <section className="relative min-w-0 min-h-[18rem] lg:min-h-0 p-6" aria-label="Repository state">
+          {nodes.length === 0 ? (
+            <p className="text-muted text-body m-0">The repository is empty. Run git commit to create the first commit.</p>
+          ) : (
+            <DagView nodes={nodes} edges={edges} tags={tags} minLanes={2} fit ariaLabel="Commit graph of the simulated repository" />
+          )}
         </section>
 
-        {/* ---- Terminal ---- */}
-        <section className="min-w-0 min-h-0 flex flex-col bg-surface" aria-label="Terminal">
-          <div ref={termRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-2 font-mono text-xs leading-relaxed" role="log" aria-label="Command output">
+        <section className="bg-surface min-w-0 min-h-[16rem] lg:min-h-0 flex flex-col max-lg:order-3" aria-label="Terminal">
+          <div ref={termRef} className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 font-mono text-caption leading-5" role="log" aria-label="Command output">
             {log.map((l, i) => (
               <div
                 key={i}
-                className={`break-words ${
+                className={`whitespace-pre-wrap break-words ${
                   l.kind === "cmd"
-                    ? "text-fg mt-3 first:mt-0 whitespace-pre-wrap"
+                    ? "text-fg mt-3 first:mt-0"
                     : l.kind === "err"
-                    ? "text-del border-l-2 border-del pl-2 my-0.5 whitespace-pre-wrap"
+                    ? "text-del border-l-2 border-del pl-2 my-0.5"
                     : l.kind === "info"
-                    ? "text-faint font-sans italic whitespace-pre-wrap"
+                    ? "text-faint font-sans italic text-body"
                     : "text-muted pl-3"
                 }`}
               >
                 {l.kind === "cmd" && (
                   <>
-                    <span className="text-accent">$ </span>
+                    <span className="text-faint">$ </span>
                     {l.text}
                     <span className={`ml-2 ${l.ok ? "text-add" : "text-del"}`} aria-label={l.ok ? "succeeded" : "failed"}>
                       {l.ok ? "✓" : "✕"}
                     </span>
                   </>
                 )}
-                {l.kind !== "cmd" && <OutputLine text={l.text} />}
+                {l.kind !== "cmd" && l.text}
               </div>
             ))}
             {log.length > 0 && log[log.length - 1].text.startsWith("Type a git") && (
-              <div className="text-faint mt-2">
-                {HELP.map((h) => (
-                  <OutputLine key={h} text={h} />
-                ))}
-              </div>
+              <div className="text-faint mt-2 whitespace-pre overflow-x-auto">{HELP.join("\n")}</div>
             )}
           </div>
-
-          <div className="flex-none px-4 pb-4 pt-2 space-y-2.5">
-            <div className="flex flex-wrap gap-1.5" aria-label="Suggested commands">
-              {suggestions.map((c) => (
-                <button key={c} onClick={() => run(c)} className="btn font-mono text-2xs px-2 h-7 rounded-md hover:text-accent">
-                  {c}
-                </button>
-              ))}
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                run(input);
-              }}
-              className="field flex items-center gap-2 rounded-lg px-3 h-10"
-            >
-              <span className="font-mono text-accent text-sm" aria-hidden>
-                $
-              </span>
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowUp" && cmdHistory.length) {
-                    e.preventDefault();
-                    const i = histIdx === null ? cmdHistory.length - 1 : Math.max(0, histIdx - 1);
-                    setHistIdx(i);
-                    setInput(cmdHistory[i]);
-                  } else if (e.key === "ArrowDown" && histIdx !== null) {
-                    e.preventDefault();
-                    const i = histIdx + 1;
-                    if (i >= cmdHistory.length) {
-                      setHistIdx(null);
-                      setInput("");
-                    } else {
-                      setHistIdx(i);
-                      setInput(cmdHistory[i]);
-                    }
-                  }
-                }}
-                aria-label="Git command"
-                placeholder='git commit -m "message"'
-                autoComplete="off"
-                spellCheck={false}
-                className="flex-1 min-w-0 bg-transparent font-mono text-sm text-fg placeholder:text-faint focus:outline-none"
-              />
-            </form>
+          <div className="flex-none px-4 py-3 flex flex-wrap gap-1.5" aria-label="Suggested commands">
+            {suggestions.map((c) => (
+              <button key={c} onClick={() => run(c)} className="btn font-mono text-caption px-2 h-7 rounded-md hover:text-accent">
+                {c}
+              </button>
+            ))}
           </div>
         </section>
+
+        {/* Status line: one or two lines, written like a terminal comment. */}
+        <div className="relative min-w-0 px-6 py-3 max-lg:order-2" aria-live="polite">
+          <div className="flex items-start gap-2 min-h-[2.5rem]">
+            <span className="font-mono text-caption text-faint leading-5 flex-none select-none" aria-hidden>
+              #
+            </span>
+            <p className="text-body text-fg m-0 min-w-0 flex-1 line-clamp-2" title={note?.text ?? scenario.hint}>
+              {note?.text ?? scenario.hint}
+            </p>
+            <div className="flex-none flex items-center gap-1 -mr-2">
+              {note?.recovery && (
+                <button
+                  onClick={() => setRecoveryOpen((v) => !v)}
+                  aria-expanded={recoveryOpen}
+                  className="btn-ghost h-6 px-2 rounded-md text-caption text-warn hover:text-warn"
+                >
+                  {orphanCount > 0 ? `${orphanCount} orphaned` : "recovery"} · {recoveryOpen ? "hide" : "how to recover"}
+                </button>
+              )}
+              <button onClick={() => setKeyOpen((v) => !v)} aria-expanded={keyOpen} className="btn-ghost h-6 px-2 rounded-md text-caption">
+                key
+              </button>
+            </div>
+          </div>
+          {recoveryOpen && note?.recovery && (
+            <p className="text-body text-muted m-0 mt-1 pl-4 max-w-[80ch] max-h-28 overflow-y-auto">{note.recovery}</p>
+          )}
+          {keyOpen && (
+            <div className="popover rounded-lg absolute right-4 bottom-full mb-1 z-20 w-[min(26rem,calc(100%-2rem))] p-3 space-y-2 text-caption text-muted">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <span className="inline-flex items-center gap-1.5">
+                  <svg width="16" height="16" aria-hidden>
+                    <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgb(var(--muted))" strokeWidth="2" />
+                  </svg>
+                  commit
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <svg width="16" height="16" aria-hidden>
+                    <circle cx="8" cy="8" r="5.5" fill="none" stroke="rgb(var(--muted))" strokeWidth="2" strokeDasharray="3 3" opacity="0.5" />
+                  </svg>
+                  orphaned: no branch or tag reaches it
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <svg width="24" height="10" aria-hidden>
+                    <line x1="1" y1="5" x2="23" y2="5" stroke="rgb(var(--warn))" strokeWidth="1.5" strokeDasharray="4 3" />
+                  </svg>
+                  copy (rebase, cherry-pick)
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="px-1.5 rounded font-semibold bg-fg text-ground">HEAD → main</span>
+                <span className="px-1.5 rounded bg-raised text-fg">topic</span>
+                <span className="px-1.5 rounded border border-warn text-warn">v1</span>
+                <span>HEAD · local branch · tag</span>
+              </div>
+              <p className="m-0 text-faint">
+                History only: no file contents, so no merge conflicts, and no remote branches. Use the merge and rebase previews on a real repository to see conflicts.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(input);
+          }}
+          className="bg-surface px-4 pb-4 pt-0 max-lg:order-4"
+        >
+          <div className="field flex items-center gap-2 rounded-lg px-3 h-10">
+            <span className="font-mono text-body text-accent" aria-hidden>
+              $
+            </span>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowUp" && cmdHistory.length) {
+                  e.preventDefault();
+                  const i = histIdx === null ? cmdHistory.length - 1 : Math.max(0, histIdx - 1);
+                  setHistIdx(i);
+                  setInput(cmdHistory[i]);
+                } else if (e.key === "ArrowDown" && histIdx !== null) {
+                  e.preventDefault();
+                  const i = histIdx + 1;
+                  if (i >= cmdHistory.length) {
+                    setHistIdx(null);
+                    setInput("");
+                  } else {
+                    setHistIdx(i);
+                    setInput(cmdHistory[i]);
+                  }
+                }
+              }}
+              aria-label="Git command"
+              placeholder='git commit -m "message"'
+              autoComplete="off"
+              spellCheck={false}
+              className="flex-1 min-w-0 bg-transparent font-mono text-body text-fg placeholder:text-faint focus:outline-none"
+            />
+          </div>
+        </form>
       </div>
     </main>
   );
@@ -382,16 +380,4 @@ function recoveryFor(before: SimState, after: SimState): string | undefined {
   const tip = newestOrphan(after, liveAfter);
   const where = tip ? ` Run git branch rescue ${tip.slice(0, 7)} to point a new branch at the newest one.` : "";
   return `${newlyLost.length} commit${newlyLost.length === 1 ? " is" : "s are"} now orphaned. They are still stored, drawn faded with dashed rings.${where} Undo also brings them back. git gc deletes them for good. Real Git can also find them with git reflog; the simulator does not implement the reflog.`;
-}
-
-/** Terminal output. "command   description" help rows become two aligned columns instead of wrapping padded text. */
-function OutputLine({ text }: { text: string }) {
-  const m = text.match(/^(git [^\n]*?|help)\s{2,}(\S.*)$/);
-  if (!m) return <span className="whitespace-pre-wrap">{text}</span>;
-  return (
-    <span className="grid grid-cols-[minmax(0,13rem)_minmax(0,1fr)] gap-x-3">
-      <span className="text-fg/80 break-words">{m[1]}</span>
-      <span className="break-words">{m[2]}</span>
-    </span>
-  );
 }

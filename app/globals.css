@@ -2,11 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Design tokens. Surfaces step up in lightness (ground < surface < raised); hierarchy
-   comes from those steps and from spacing, not from rules. Borders are kept only on
-   controls (fields, buttons) where they signal "you can act here". Branch colours are
-   defined in components/branchColors.ts so graph, sidebar and legend share one source.
-   Spacing is a 4px grid; type is 11 / 12 / 13 / 15 / 20 (see tailwind.config.ts). */
+/* Design tokens. Surfaces step up in lightness (ground < surface < raised);
+   structure comes from 1px borders, not shadows. Branch colours are defined
+   in components/branchColors.ts so graph, sidebar and legend share one source. */
 :root {
   --ground: 16 18 20; /* #101214 app background, graph canvas */
   --surface: 23 26 29; /* #171A1D toolbar and sidebar */
@@ -49,7 +47,7 @@ body {
 }
 
 @layer components {
-  /* Surfaces */
+  /* Surfaces: separated by lightness and spacing. Only floating layers and inputs get an outline. */
   .panel {
     background-color: rgb(var(--surface));
   }
@@ -81,23 +79,22 @@ body {
     border-color: rgb(var(--accent));
     box-shadow: 0 0 0 1px rgb(var(--accent));
   }
+  /* Secondary action: a quiet filled chip, no outline. */
   .btn {
-    background-color: transparent;
-    border: 1px solid rgb(var(--line));
+    background-color: rgb(var(--raised));
     color: rgb(var(--fg));
-    transition: background-color var(--ease), border-color var(--ease), color var(--ease);
+    transition: background-color var(--ease), color var(--ease);
   }
   .btn:hover:not(:disabled) {
-    background-color: rgb(var(--raised));
-    border-color: rgb(var(--faint));
+    background-color: rgb(var(--line));
   }
   .btn:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: not-allowed;
   }
+  /* Primary action: the one place a filled accent appears. */
   .btn-primary {
     background-color: rgb(var(--accent));
-    border: 1px solid rgb(var(--accent));
     color: rgb(var(--ground));
     font-weight: 600;
     transition: filter var(--ease), opacity var(--ease);
@@ -109,10 +106,9 @@ body {
     opacity: 0.4;
     cursor: not-allowed;
   }
-  /* Quiet toolbar action: no border until hovered */
+  /* Tertiary toolbar action: text until hovered. */
   .btn-ghost {
     background-color: transparent;
-    border: 1px solid transparent;
     color: rgb(var(--muted));
     transition: background-color var(--ease), color var(--ease);
   }
@@ -155,6 +151,7 @@ body {
   position: static !important;
   margin: 0 !important;
   background: rgb(var(--surface)) !important;
+  border: 1px solid rgb(var(--line));
   border-radius: 8px;
   overflow: hidden;
 }

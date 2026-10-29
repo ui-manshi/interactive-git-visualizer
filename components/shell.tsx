@@ -21,21 +21,21 @@ export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-2 flex-none rounded-md pr-1 hover:text-fg text-fg" aria-label="Git Visualizer home">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
-        <path d="M5 3.5v11M5 11c0-3 8-1.5 8-6" stroke="rgb(98 199 178)" strokeWidth="1.6" strokeLinecap="round" />
-        <circle cx="5" cy="3.5" r="1.9" fill="rgb(16 18 20)" stroke="rgb(98 199 178)" strokeWidth="1.5" />
-        <circle cx="5" cy="14.5" r="1.9" fill="rgb(98 199 178)" />
-        <circle cx="13" cy="5" r="1.9" fill="rgb(16 18 20)" stroke="rgb(98 199 178)" strokeWidth="1.5" />
+        <path d="M5 3.5v11M5 11c0-3 8-1.5 8-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="5" cy="3.5" r="1.9" fill="rgb(var(--surface))" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="5" cy="14.5" r="1.9" fill="currentColor" />
+        <circle cx="13" cy="5" r="1.9" fill="rgb(var(--surface))" stroke="currentColor" strokeWidth="1.5" />
       </svg>
-      <span className={`text-sm font-semibold tracking-tight ${compact ? "hidden sm:inline" : ""}`}>Git Visualizer</span>
+      <span className={`text-body font-semibold tracking-tight ${compact ? "hidden sm:inline" : ""}`}>Git Visualizer</span>
     </Link>
   );
 }
 
 export function ToolbarDivider() {
-  return <span className="w-2 flex-none" aria-hidden />;
+  return <span className="w-px h-5 bg-line flex-none mx-1" aria-hidden />;
 }
 
-export const toolbarBtn = "h-8 px-2.5 rounded-md text-sm inline-flex items-center gap-1.5 whitespace-nowrap";
+export const toolbarBtn = "h-8 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap";
 
 export function IconButton({
   label,
@@ -102,4 +102,4 @@ export function MoreMenu({ children, label = "More actions" }: { children: React
 }
 
 export const menuItem =
-  "w-full text-left h-8 px-2.5 rounded-md text-sm flex items-center gap-2 text-fg hover:bg-surface";
+  "w-full text-left h-8 px-2.5 rounded-md text-body flex items-center gap-2 text-fg hover:bg-surface";

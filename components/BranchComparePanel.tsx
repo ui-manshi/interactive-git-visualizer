@@ -88,8 +88,8 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
     <div className="flex flex-col min-h-0 h-full">
       <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3 flex-shrink-0">
         <div className="min-w-0">
-          <h2 className="font-semibold text-lg leading-snug m-0">Compare branches</h2>
-          <p className="text-xs text-muted mt-1 m-0 flex items-center gap-1.5 flex-wrap">
+          <h2 className="font-semibold text-title leading-snug m-0">Compare branches</h2>
+          <p className="text-body text-muted mt-1 m-0 flex items-center gap-1.5 flex-wrap">
             <span className="font-mono text-fg">{base.name}</span>
             <button onClick={onSwap} className="hover:text-fg px-1 rounded" title="Swap sides" aria-label="Swap sides">
               ⇄
@@ -115,7 +115,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-3 py-2 text-body font-medium border-b-2 -mb-px transition-colors ${
               tab === id ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg"
             }`}
           >
@@ -124,7 +124,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
         ))}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-5 text-sm">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-5 text-body">
         {error && <p className="text-del">{error}</p>}
         {!data && !error && <p className="text-muted">Comparing…</p>}
         {data && tab === "merge" && <MergePreview repoPath={repoPath} base={base} head={head} relation={data.relation} />}
@@ -136,14 +136,14 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
             <p className="m-0 text-fg/90 leading-relaxed">{summary(data)}</p>
 
             <div className="grid grid-cols-3 gap-2">
-              <Stat label={`Ahead (${head.name})`} value={data.ahead.count} color="rgb(var(--accent))" />
+              <Stat label={`Ahead (${head.name})`} value={data.ahead.count} color="rgb(var(--blue))" />
               <Stat label={`Behind (${base.name})`} value={data.behind.count} color="rgb(var(--violet))" />
               <div className="rounded-lg inset p-2.5">
-                <p className="text-2xs text-muted m-0">Merge base</p>
+                <p className="text-caption text-muted m-0">Merge base</p>
                 {data.mergeBase ? (
                   <button
                     onClick={() => onGoToCommit(data.mergeBase!.hash)}
-                    className="font-mono text-sm text-accent hover:underline mt-1"
+                    className="font-mono text-body text-accent hover:underline mt-1"
                     title={data.mergeBase.message}
                   >
                     {data.mergeBase.hash.slice(0, 7)}
@@ -151,7 +151,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
                 ) : (
                   <p className="text-muted mt-1 m-0">none</p>
                 )}
-                {data.mergeBaseCount > 1 && <p className="text-2xs text-muted m-0">{data.mergeBaseCount} candidates</p>}
+                {data.mergeBaseCount > 1 && <p className="text-caption text-muted m-0">{data.mergeBaseCount} candidates</p>}
               </div>
             </div>
 
@@ -160,11 +160,11 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
 
             {data.mergeBase && (
               <section className="space-y-3">
-                <p className="text-xs text-muted m-0">Files changed since the merge base</p>
+                <p className="text-body text-muted m-0">Files changed since the merge base</p>
                 <FileList title={`On ${head.name}`} files={data.files.head} total={data.files.headTotal} />
                 <FileList title={`On ${base.name}`} files={data.files.base} total={data.files.baseTotal} />
                 {data.files.bothSidesTotal > 0 && (
-                  <div className="rounded-lg border border-warn/40 bg-warn/10 p-3">
+                  <div className="rounded-lg bg-warn/10 p-3">
                     <FileList
                       title="Changed on both sides"
                       note="These files were edited on both branches, so merging them may produce conflicts."
@@ -175,7 +175,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
                 )}
               </section>
             )}
-            {data.truncated && <p className="text-xs text-warn m-0">History was very long, so counts may be incomplete.</p>}
+            {data.truncated && <p className="text-body text-warn m-0">History was very long, so counts may be incomplete.</p>}
           </>
         )}
       </div>
@@ -186,10 +186,10 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="rounded-lg inset p-2.5">
-      <p className="text-2xs text-muted m-0 truncate" title={label}>
+      <p className="text-caption text-muted m-0 truncate" title={label}>
         {label}
       </p>
-      <p className="font-semibold text-xl m-0 mt-0.5" style={{ color }}>
+      <p className="font-semibold text-display m-0 mt-0.5" style={{ color, textShadow: `0 0 12px ${color}` }}>
         {value.toLocaleString()}
       </p>
     </div>
@@ -210,23 +210,23 @@ function CommitList({
   if (total === 0) return null;
   return (
     <section>
-      <p className="text-xs text-muted mb-1.5 m-0">
+      <p className="text-body text-muted mb-1.5 m-0">
         {title} ({total.toLocaleString()})
       </p>
       <ul className="m-0 p-0 list-none rounded-lg inset overflow-hidden">
         {commits.map((c) => (
           <li key={c.hash} className="border-b border-white/[0.07] last:border-b-0">
             <button onClick={() => onGoToCommit(c.hash)} className="w-full text-left px-2.5 py-1.5 hover:bg-raised">
-              <span className="block text-sm text-fg truncate">{c.message}</span>
-              <span className="block text-2xs text-muted truncate">
-                <span className="font-mono text-accent">{c.hash.slice(0, 7)}</span> · {c.author} ·{" "}
+              <span className="block text-body text-fg truncate">{c.message}</span>
+              <span className="block text-caption text-muted truncate">
+                <span className="font-mono text-fg">{c.hash.slice(0, 7)}</span> · {c.author} ·{" "}
                 {new Date(c.timestamp * 1000).toLocaleDateString()}
               </span>
             </button>
           </li>
         ))}
       </ul>
-      {total > commits.length && <p className="text-2xs text-muted mt-1 m-0">Showing the newest {commits.length}.</p>}
+      {total > commits.length && <p className="text-caption text-muted mt-1 m-0">Showing the newest {commits.length}.</p>}
     </section>
   );
 }
@@ -235,14 +235,14 @@ function FileList({ title, files, total, note }: { title: string; files: string[
   const shown = files.slice(0, 40);
   return (
     <div>
-      <p className="text-xs text-fg m-0">
+      <p className="text-body text-fg m-0">
         {title} <span className="text-muted">({total.toLocaleString()})</span>
       </p>
-      {note && <p className="text-2xs text-muted m-0 mt-0.5">{note}</p>}
+      {note && <p className="text-caption text-muted m-0 mt-0.5">{note}</p>}
       {total === 0 ? (
-        <p className="text-2xs text-muted m-0 mt-1">No file changes.</p>
+        <p className="text-caption text-muted m-0 mt-1">No file changes.</p>
       ) : (
-        <ul className="m-0 mt-1 p-0 list-none font-mono text-2xs text-fg/90 space-y-0.5">
+        <ul className="m-0 mt-1 p-0 list-none font-mono text-caption text-fg/90 space-y-0.5">
           {shown.map((f) => (
             <li key={f} className="break-all">
               {f}

@@ -115,24 +115,24 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
     };
   }, [openPath, base]);
 
-  if (error) return <p className="text-del text-sm m-0">{error}</p>;
-  if (!summary) return <p className="text-muted text-sm m-0">Computing diff…</p>;
+  if (error) return <p className="text-del text-body m-0">{error}</p>;
+  if (!summary) return <p className="text-muted text-body m-0">Computing diff…</p>;
 
   if (summary.files.length === 0) {
-    return <p className="text-muted text-sm m-0">No file changes between these commits.</p>;
+    return <p className="text-muted text-body m-0">No file changes between these commits.</p>;
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-fg m-0">
+        <p className="text-body text-fg m-0">
           {summary.totalFiles} file{summary.totalFiles === 1 ? "" : "s"} changed{" "}
-          <span className="font-mono text-xs text-add">+{summary.additions}</span>{" "}
-          <span className="font-mono text-xs text-del">−{summary.deletions}</span>
+          <span className="font-mono text-body text-add">+{summary.additions}</span>{" "}
+          <span className="font-mono text-body text-del">−{summary.deletions}</span>
           {summary.statsLimited && <span className="text-muted"> (line counts skipped for some files)</span>}
         </p>
         {onModeChange && (
-          <div role="group" aria-label="Diff layout" className="segmented flex text-xs rounded-md overflow-hidden">
+          <div role="group" aria-label="Diff layout" className="segmented flex text-body rounded-md overflow-hidden">
             {(["unified", "split"] as DiffMode[]).map((m) => (
               <button
                 key={m}
@@ -167,17 +167,17 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
                 } ${expandable ? "hover:brightness-110 cursor-pointer" : "cursor-default"}`}
               >
                 <span
-                  className={`text-2xs font-bold w-[18px] h-[18px] mt-px flex items-center justify-center rounded flex-none ${st.cls}`}
+                  className={`text-caption font-bold w-[18px] h-[18px] mt-px flex items-center justify-center rounded flex-none ${st.cls}`}
                   title={f.status}
                   aria-label={f.status}
                 >
                   {st.letter}
                 </span>
-                <span className="font-mono text-xs leading-5 min-w-0 flex-1 [overflow-wrap:anywhere]" title={f.path}>
+                <span className="font-mono text-body leading-5 min-w-0 flex-1 [overflow-wrap:anywhere]" title={f.path}>
                   <span className="text-faint">{dir}</span>
                   <span className="text-fg font-medium">{name}</span>
                 </span>
-                <span className="text-2xs leading-5 flex-none font-mono">
+                <span className="text-caption leading-5 flex-none font-mono">
                   {f.binary && <span className="text-muted">binary</span>}
                   {f.submodule && <span className="text-muted">submodule</span>}
                   {f.modeOnly && <span className="text-muted">mode change</span>}
@@ -203,8 +203,8 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
 
               {isOpen && (
                 <div className="bg-ground overflow-x-auto rounded-b-md">
-                  {diffError && <p className="p-3 text-sm text-del m-0">{diffError}</p>}
-                  {!diff && !diffError && <p className="p-3 text-sm text-muted m-0">Loading…</p>}
+                  {diffError && <p className="p-3 text-body text-del m-0">{diffError}</p>}
+                  {!diff && !diffError && <p className="p-3 text-body text-muted m-0">Loading…</p>}
                   {diff && diff.path === f.path && <HunkTable diff={diff} mode={mode} lang={langFor(f.path)} />}
                 </div>
               )}
@@ -239,19 +239,19 @@ const HUNK_CELL = "px-3 py-0.5 text-faint select-none";
 
 function HunkTable({ diff, mode, lang }: { diff: FileDiff; mode: DiffMode; lang: Lang | null }) {
   if (diff.hunks.length === 0) {
-    return <p className="p-3 text-sm text-muted m-0">No line changes.</p>;
+    return <p className="p-3 text-body text-muted m-0">No line changes.</p>;
   }
 
   return (
     <div>
       {diff.approximate && (
-        <p className="px-3 py-1.5 text-2xs text-warn bg-warn/10 m-0">
+        <p className="px-3 py-1.5 text-caption text-warn bg-warn/10 m-0">
           This change is very large, so the whole changed region is shown as replaced rather than
           minimally diffed.
         </p>
       )}
       {mode === "split" ? (
-        <table className="text-xs leading-5 font-mono w-full border-collapse table-fixed">
+        <table className="text-body leading-5 font-mono w-full border-collapse table-fixed">
           <colgroup>
             <col style={{ width: "3.25rem" }} />
             <col />
@@ -265,7 +265,7 @@ function HunkTable({ diff, mode, lang }: { diff: FileDiff; mode: DiffMode; lang:
           </tbody>
         </table>
       ) : (
-        <table className="text-xs leading-5 font-mono w-full border-collapse">
+        <table className="text-body leading-5 font-mono w-full border-collapse">
           <tbody>
             {diff.hunks.map((h, hi) => (
               <HunkRows key={hi} hunk={h} lang={lang} />
@@ -300,7 +300,7 @@ function HunkRows({ hunk, lang }: { hunk: Hunk; lang: Lang | null }) {
             </td>
             <td className="whitespace-pre text-fg pr-3">
               <Code text={text} lang={lang} />
-              {noEol && <span className="ml-2 text-2xs text-warn select-none">⏎ no newline at end of file</span>}
+              {noEol && <span className="ml-2 text-caption text-warn select-none">⏎ no newline at end of file</span>}
             </td>
           </tr>
         );
@@ -356,7 +356,7 @@ function SplitHunkRows({ hunk, lang }: { hunk: Hunk; lang: Lang | null }) {
         <td className={`whitespace-pre-wrap break-all text-fg pr-2 align-top ${bg} ${side === "l" ? "border-r border-line" : ""}`}>
           <span className={`select-none inline-block w-3 ${signCls}`}>{sign}</span>
           <Code text={text} lang={lang} />
-          {noEol && <span className="ml-2 text-2xs text-warn select-none">⏎ no newline at end of file</span>}
+          {noEol && <span className="ml-2 text-caption text-warn select-none">⏎ no newline at end of file</span>}
         </td>
       </>
     );

@@ -165,19 +165,19 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
       <div key={node.path}>
         <button
           onClick={() => (isDir ? toggle(node.path) : setOpenFile(node.file!))}
-          className={`w-full text-left flex items-center gap-1.5 py-0.5 pr-2 text-sm rounded hover:bg-raised transition-colors ${
+          className={`w-full text-left flex items-center gap-1.5 py-0.5 pr-2 text-body rounded hover:bg-raised transition-colors ${
             isSelected ? "bg-accent/15 text-fg" : "text-fg/90"
           }`}
           style={{ paddingLeft: depth * 14 + 6 }}
           title={node.path}
         >
-          <span className="w-3 text-muted text-2xs flex-shrink-0">
+          <span className="w-3 text-muted text-caption flex-shrink-0">
             {isDir ? (isOpen ? "▾" : "▸") : ""}
           </span>
           <NodeIcon kind={isDir ? (isOpen ? "folder-open" : "folder") : node.file?.isSubmodule ? "link" : "file"} />
           <span className="truncate">{node.name}</span>
           {node.file?.mode === "100755" && (
-            <span className="text-2xs text-muted flex-shrink-0">executable</span>
+            <span className="text-caption text-muted flex-shrink-0">executable</span>
           )}
         </button>
         {isDir && isOpen && sortedChildren(node).map((c) => renderNode(c, depth + 1))}
@@ -185,16 +185,16 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
     );
   }
 
-  if (error) return <p className="text-del text-sm">{error}</p>;
-  if (!root || !files) return <p className="text-muted text-sm">Loading file tree…</p>;
-  if (files.length === 0) return <p className="text-muted text-sm">This commit has no files.</p>;
+  if (error) return <p className="text-del text-body">{error}</p>;
+  if (!root || !files) return <p className="text-muted text-body">Loading file tree…</p>;
+  if (files.length === 0) return <p className="text-muted text-body">This commit has no files.</p>;
 
   const lines = blob && !blob.binary ? blob.content.split("\n") : [];
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      <p className="text-xs text-muted">
+      <p className="text-body text-muted">
         {files.length} file{files.length === 1 ? "" : "s"} at this commit
         {truncated && " (listing truncated)"}
       </p>
@@ -205,13 +205,13 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
 
       {openFile && (
         <div className="flex-1 min-h-0 flex flex-col inset rounded-lg overflow-hidden">
-          <div className="px-3 py-1.5 bg-raised border-b border-line flex items-center justify-between gap-2">
-            <span className="text-xs font-mono text-fg/90 truncate" title={openFile.path}>
+          <div className="px-3 py-1.5 bg-raised flex items-center justify-between gap-2">
+            <span className="text-body font-mono text-fg/90 truncate" title={openFile.path}>
               {openFile.path}
             </span>
             <div className="flex items-center gap-2 flex-shrink-0">
               {!openFile.isSubmodule && (
-                <div role="group" aria-label="File view" className="flex text-2xs rounded segmented overflow-hidden">
+                <div role="group" aria-label="File view" className="flex text-caption rounded segmented overflow-hidden">
                   {(["content", "blame", "history"] as FileView[]).map((v) => (
                     <button
                       key={v}
@@ -225,7 +225,7 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
                 </div>
               )}
               {blob && fileView === "content" && (
-                <span className="text-2xs text-muted">{formatBytes(blob.size)}</span>
+                <span className="text-caption text-muted">{formatBytes(blob.size)}</span>
               )}
             </div>
           </div>
@@ -234,20 +234,20 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
 
           <div className={`flex-1 overflow-auto bg-ground/55 ${insightView ? "hidden" : ""}`}>
             {openFile.isSubmodule && (
-              <p className="p-3 text-sm text-muted">
+              <p className="p-3 text-body text-muted">
                 Git submodule — pinned to commit{" "}
                 <span className="font-mono">{openFile.hash.slice(0, 10)}</span> in another repository.
               </p>
             )}
-            {blobError && <p className="p-3 text-sm text-del">{blobError}</p>}
+            {blobError && <p className="p-3 text-body text-del">{blobError}</p>}
             {!blob && !blobError && !openFile.isSubmodule && (
-              <p className="p-3 text-sm text-muted">Loading…</p>
+              <p className="p-3 text-body text-muted">Loading…</p>
             )}
             {blob?.binary && (
-              <p className="p-3 text-sm text-muted">Binary file ({formatBytes(blob.size)}) — not shown.</p>
+              <p className="p-3 text-body text-muted">Binary file ({formatBytes(blob.size)}) — not shown.</p>
             )}
             {blob && !blob.binary && (
-              <table className="text-xs font-mono w-full border-collapse">
+              <table className="text-body font-mono w-full border-collapse">
                 <tbody>
                   {lines.slice(0, MAX_RENDERED_LINES).map((line, i) => (
                     <tr key={i}>
@@ -261,7 +261,7 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
               </table>
             )}
             {blob && !blob.binary && (lines.length > MAX_RENDERED_LINES || blob.truncated) && (
-              <p className="p-3 text-xs text-muted">
+              <p className="p-3 text-body text-muted">
                 Showing the first {Math.min(lines.length, MAX_RENDERED_LINES)} lines
                 {blob.truncated ? " (file is larger than 1 MB; content truncated)" : ""}.
               </p>
@@ -301,7 +301,7 @@ function NodeIcon({ kind }: { kind: "folder" | "folder-open" | "file" | "link" }
       </svg>
     );
   return (
-    <svg {...common} className="flex-shrink-0 text-accent">
+    <svg {...common} className="flex-shrink-0 text-muted">
       {kind === "folder" ? (
         <path d="M1.5 4a1 1 0 0 1 1-1h3.2l1.3 1.5h6.5a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4Z" />
       ) : (

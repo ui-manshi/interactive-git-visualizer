@@ -56,14 +56,14 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
         className="flex-1 min-w-[6rem] accent-[rgb(var(--accent))]"
       />
 
-      <div className="hidden sm:block min-w-0 w-60 text-xs leading-tight">
+      <div className="hidden sm:block min-w-0 w-60 text-body leading-tight">
         {active && current ? (
           <>
             <p className="m-0 text-fg truncate" title={current.message}>
               {current.message}
             </p>
             <p className="m-0 text-muted truncate">
-              <span className="font-mono text-accent">{current.hash.slice(0, 7)}</span> ·{" "}
+              <span className="font-mono text-fg">{current.hash.slice(0, 7)}</span> ·{" "}
               {new Date(current.timestamp * 1000).toLocaleDateString()} · {shown + 1}/{total}
             </p>
           </>
@@ -78,8 +78,8 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
             key={s}
             onClick={() => onSpeed(s)}
             aria-pressed={speed === s}
-            className={`text-2xs px-1.5 h-6 rounded border tabular-nums ${
-              speed === s ? "border-accent bg-accent/10 text-accent" : "btn text-muted hover:text-fg"
+            className={`text-caption px-1.5 h-6 rounded tabular-nums ${
+              speed === s ? "ring-1 ring-inset ring-accent bg-accent/10 text-accent" : "btn text-muted hover:text-fg"
             }`}
           >
             {s}×
@@ -88,7 +88,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
         {active && (
           <button
             onClick={() => onChange(null)}
-            className="text-2xs px-2 h-6 rounded btn text-fg ml-1"
+            className="text-caption px-2 h-6 rounded btn text-fg ml-1"
           >
             Latest
           </button>

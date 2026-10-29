@@ -38,9 +38,9 @@ interface Data {
 const OUTCOME: Record<FilePreview["outcome"], { label: string; cls: string }> = {
   conflict: { label: "Conflict", cls: "bg-del/20 text-del" },
   merged: { label: "Auto-merged", cls: "bg-add/20 text-add" },
-  identical: { label: "Same change", cls: "bg-accent/15 text-accent" },
+  identical: { label: "Same change", cls: "bg-raised text-muted" },
   "theirs-only": { label: "From theirs", cls: "bg-violet/20 text-violet" },
-  "ours-only": { label: "From ours", cls: "bg-accent/15 text-accent" },
+  "ours-only": { label: "From ours", cls: "bg-blue/20 text-blue" },
 };
 
 export default function MergePreview({
@@ -86,13 +86,13 @@ export default function MergePreview({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted m-0">
+      <p className="text-body text-muted m-0">
         What <span className="font-mono text-fg">git merge {head.name}</span> would do while on{" "}
         <span className="font-mono text-fg">{base.name}</span>. Nothing is changed in your repository.
       </p>
 
       {data.clean ? (
-        <div className="rounded-lg border border-add/50 bg-add/10 p-3">
+        <div className="rounded-lg bg-add/10 p-3">
           <p className="m-0 font-semibold text-add">No conflicts</p>
           <p className="m-0 mt-1 text-fg/90">
             {relation === "ahead"
@@ -103,7 +103,7 @@ export default function MergePreview({
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-del/50 bg-del/10 p-3">
+        <div className="rounded-lg bg-del/10 p-3">
           <p className="m-0 font-semibold text-del">
             {s.conflicted} file{s.conflicted === 1 ? "" : "s"} would conflict ({s.conflictRegions} region
             {s.conflictRegions === 1 ? "" : "s"})
@@ -112,7 +112,7 @@ export default function MergePreview({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-body text-muted">
         <span>{s.merged} auto-merged</span>
         <span>{s.theirsOnly} from {head.name}</span>
         <span>{s.oursOnly} only on {base.name}</span>
@@ -123,10 +123,10 @@ export default function MergePreview({
         <FileCard key={f.path} file={f} base={base.name} head={head.name} />
       ))}
       {data.totalFiles && data.totalFiles > data.files.length && (
-        <p className="text-xs text-muted m-0">Showing {data.files.length} of {data.totalFiles} files.</p>
+        <p className="text-body text-muted m-0">Showing {data.files.length} of {data.totalFiles} files.</p>
       )}
 
-      <p className="text-2xs text-muted m-0 leading-relaxed">
+      <p className="text-caption text-muted m-0 leading-relaxed">
         This is a line-based three-way merge against the merge base
         {data.mergeBase && data.mergeBase.candidates > 1 ? ` (the most recent of ${data.mergeBase.candidates} candidates)` : ""}.
         Unlike Git, it does not detect renamed files, so a file renamed on one side and edited on the other appears as two separate changes.
@@ -139,10 +139,10 @@ function FileCard({ file, base, head }: { file: FilePreview; base: string; head:
   const st = OUTCOME[file.outcome];
   const body = (
     <div className="flex items-start gap-2 min-w-0">
-      <span className={`mt-0.5 flex-shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded ${st.cls}`}>{st.label}</span>
+      <span className={`mt-0.5 flex-shrink-0 text-caption font-bold px-1.5 py-0.5 rounded ${st.cls}`}>{st.label}</span>
       <span className="min-w-0">
-        <span className="block font-mono text-xs text-fg break-all">{file.path}</span>
-        <span className="block text-2xs text-muted">{file.detail}</span>
+        <span className="block font-mono text-body text-fg break-all">{file.path}</span>
+        <span className="block text-caption text-muted">{file.detail}</span>
       </span>
     </div>
   );
@@ -154,7 +154,7 @@ function FileCard({ file, base, head }: { file: FilePreview; base: string; head:
   return (
     <details open={file.outcome === "conflict"} className="rounded-lg inset group">
       <summary className="p-2.5 cursor-pointer list-none">{body}</summary>
-      <div className="border-t border-line bg-ground/60 p-2 overflow-x-auto font-mono text-2xs leading-relaxed">
+      <div className="bg-ground/60 p-2 overflow-x-auto font-mono text-caption leading-relaxed">
         {file.segments.map((seg, i) => {
           if (seg.type === "skip") {
             return (
@@ -175,10 +175,10 @@ function FileCard({ file, base, head }: { file: FilePreview; base: string; head:
             );
           }
           return (
-            <div key={i} className="my-1 rounded border border-del/40 overflow-hidden">
-              <div className="px-2 py-0.5 bg-accent/15 text-accent">{`<<<<<<< ours (${base})`}</div>
+            <div key={i} className="my-1 rounded overflow-hidden">
+              <div className="px-2 py-0.5 bg-blue/15 text-blue">{`<<<<<<< ours (${base})`}</div>
               {seg.ours!.map((l, j) => (
-                <div key={j} className="px-2 bg-accent/5 text-fg whitespace-pre-wrap break-all">
+                <div key={j} className="px-2 bg-blue/5 text-fg whitespace-pre-wrap break-all">
                   {l || " "}
                 </div>
               ))}

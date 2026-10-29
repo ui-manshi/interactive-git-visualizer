@@ -40,7 +40,7 @@ export default function ShortcutsHelp({ open, onClose }: { open: boolean; onClos
         className="popover rounded-lg w-full max-w-md p-5"
       >
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-lg">Keyboard shortcuts</h2>
+          <h2 className="font-semibold text-title">Keyboard shortcuts</h2>
           <button
             ref={closeRef}
             onClick={onClose}
@@ -52,13 +52,13 @@ export default function ShortcutsHelp({ open, onClose }: { open: boolean; onClos
         </div>
         <ul className="m-0 p-0 list-none space-y-2">
           {SHORTCUTS.map((s) => (
-            <li key={s.label} className="flex items-center justify-between gap-4 text-sm">
+            <li key={s.label} className="flex items-center justify-between gap-4 text-body">
               <span className="text-fg/90">{s.label}</span>
               <span className="flex gap-1 flex-shrink-0">
                 {s.keys.map((k) => (
                   <kbd
                     key={k}
-                    className="font-mono text-xs min-w-[1.6rem] text-center px-1.5 py-0.5 rounded inset text-accent"
+                    className="font-mono text-body min-w-[1.6rem] text-center px-1.5 py-0.5 rounded inset text-fg"
                   >
                     {k}
                   </kbd>
@@ -67,7 +67,7 @@ export default function ShortcutsHelp({ open, onClose }: { open: boolean; onClos
             </li>
           ))}
         </ul>
-        <p className="text-xs text-muted mt-4">
+        <p className="text-body text-muted mt-4">
           Arrow-key navigation is paused while compare mode is on.
         </p>
       </div>

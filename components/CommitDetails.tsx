@@ -37,7 +37,7 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
 
 /** Label/value grid. The value column can shrink, so long emails, hashes and paths wrap instead of clipping. */
 export function MetaGrid({ children }: { children: ReactNode }) {
-  return <dl className="grid grid-cols-[4.25rem_minmax(0,1fr)] gap-x-3 gap-y-3 text-sm m-0">{children}</dl>;
+  return <dl className="grid grid-cols-[4.25rem_minmax(0,1fr)] gap-x-3 gap-y-3 text-body m-0">{children}</dl>;
 }
 
 export function MetaRow({ label, children }: { label: string; children: ReactNode }) {
@@ -53,7 +53,7 @@ export function MetaRow({ label, children }: { label: string; children: ReactNod
 export function HashValue({ value, copyLabel = "Copy full hash" }: { value: string; copyLabel?: string }) {
   return (
     <span className="flex items-start gap-1 min-w-0">
-      <span className="font-mono text-xs leading-5 break-all min-w-0 select-all">{value}</span>
+      <span className="font-mono text-body leading-5 break-all min-w-0 select-all">{value}</span>
       <CopyButton text={value} label={copyLabel} />
     </span>
   );

@@ -6,12 +6,8 @@
  * These are design metrics of the renderer, not properties of any repository: the
  * number of lanes and rows always comes from the repository's real history.
  */
-export const ROW_H = 34;
-/**
- * Lane spacing of the server layout (x = lane * LANE_W). The renderer re-spaces lanes to the
- * width it actually has (see laneSpacing in components/lanes.ts), so this is the layout unit,
- * not the drawn distance: lane index is recovered with Math.round(x / LANE_W).
- */
-export const LANE_W = 24;
+export const ROW_H = 36;
+/** Lanes are wide enough that two neighbouring branches read as two lines, not one thick one. */
+export const LANE_W = 28;
 /** Left padding before lane 0. */
-export const LANE_PAD = 20;
+export const LANE_PAD = 22;

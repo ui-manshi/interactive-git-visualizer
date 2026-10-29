@@ -14,7 +14,7 @@ interface Props {
   inputRef: RefObject<HTMLInputElement>;
 }
 
-const field = "field rounded-md px-2 h-8 text-xs text-fg";
+const field = "field rounded-md px-2 h-8 text-body text-fg";
 
 export default function FilterBar({
   value,
@@ -32,7 +32,7 @@ export default function FilterBar({
   const [open, setOpen] = useState(extrasCount > 0);
 
   return (
-    <div role="search" className="flex-none bg-surface px-3 py-2 space-y-2">
+    <div role="search" className="flex-none px-3 pt-3 pb-2 space-y-2">
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
@@ -53,15 +53,15 @@ export default function FilterBar({
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          className={`text-xs px-2.5 h-8 rounded-md border whitespace-nowrap transition-colors ${
-            open || extrasCount > 0 ? "border-accent bg-accent/10 text-accent" : "btn text-fg"
+          className={`text-body px-2.5 h-8 rounded-md whitespace-nowrap transition-colors ${
+            open || extrasCount > 0 ? "ring-1 ring-inset ring-accent bg-accent/10 text-accent" : "btn text-fg"
           }`}
         >
           Filters{extrasCount > 0 ? ` (${extrasCount})` : ""}
         </button>
 
         {active && (
-          <div className="flex items-center gap-1.5 ml-auto text-xs">
+          <div className="flex items-center gap-1.5 ml-auto text-body">
             <span className="text-muted whitespace-nowrap" aria-live="polite">
               {matchCount === 0 ? "No matches" : `${matchCount} of ${total}`}
             </span>
@@ -69,7 +69,7 @@ export default function FilterBar({
               type="button"
               onClick={() => onStep(-1)}
               disabled={!matchCount}
-              className="w-7 h-7 rounded-md btn text-fg text-2xs"
+              className="w-7 h-7 rounded-md btn text-fg text-caption"
               aria-label="Previous match"
               title="Previous match (Shift+Enter)"
             >
@@ -79,7 +79,7 @@ export default function FilterBar({
               type="button"
               onClick={() => onStep(1)}
               disabled={!matchCount}
-              className="w-7 h-7 rounded-md btn text-fg text-2xs"
+              className="w-7 h-7 rounded-md btn text-fg text-caption"
               aria-label="Next match"
               title="Next match (Enter)"
             >
@@ -128,7 +128,7 @@ export default function FilterBar({
               ))}
             </select>
           )}
-          <label className="flex items-center gap-1 text-xs text-muted">
+          <label className="flex items-center gap-1 text-body text-muted">
             From
             <input
               type="date"
@@ -138,7 +138,7 @@ export default function FilterBar({
               className={field}
             />
           </label>
-          <label className="flex items-center gap-1 text-xs text-muted">
+          <label className="flex items-center gap-1 text-body text-muted">
             To
             <input
               type="date"

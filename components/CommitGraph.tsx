@@ -3,10 +3,10 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, { Edge, MiniMap, Node, Panel, ReactFlowInstance, useReactFlow, useStore } from "reactflow";
 import "reactflow/dist/style.css";
-import CommitNode, { COL, CommitNodeData, RefChip, RowData, refLabelWidth } from "./CommitNode";
+import CommitNode, { CommitNodeData, RefChip, RowData, refItems, refsWidth } from "./CommitNode";
 import CommitEdge, { EdgeData } from "./CommitEdge";
 import { BranchModel, RefInfo } from "./branchColors";
-import { LANE_PAD, ROW_H, laneOf, laneSpacing, laneX } from "./lanes";
+import { LANE_PAD, LANE_W, ROW_H, laneOf, laneX } from "./lanes";
 
 export type { CommitNodeData };
 
@@ -53,36 +53,29 @@ const nodeTypes = { commit: CommitNode };
 const edgeTypes = { commit: CommitEdge };
 
 /** The commit table fills the available width, within these bounds (graph units). */
-const LABEL_W_MIN = 420;
+const LABEL_W_MIN = 360;
 const LABEL_W_MAX = 1600;
 const EDGE_PAD = 12;
-/** Gap between the last lane and the first column of the commit table. */
-const LANES_TO_TABLE = 28;
-/** The refs column never takes more than this, or a third of the table, whichever is smaller. */
-const REFS_MAX = 224;
-/** Smallest message column worth showing an author column next to. */
-const MESSAGE_MIN = 220;
 
 const MAP_W = 132;
 const MAP_H = 176;
 
 interface MiniCtxValue {
   lane: Map<string, number>;
-  laneW: number;
   color: Map<string, string>;
   labelX: number;
   /** Graph units per minimap pixel, so marks stay about a pixel thick however long the history is. */
   unit: number;
 }
-const MiniCtx = createContext<MiniCtxValue>({ lane: new Map(), laneW: 24, color: new Map(), labelX: 0, unit: 1 });
+const MiniCtx = createContext<MiniCtxValue>({ lane: new Map(), color: new Map(), labelX: 0, unit: 1 });
 
 /** Minimap mark: a lane dash plus a faint stub where the commit text is. */
 function MiniMark({ id, x, y }: { id: string; x: number; y: number }) {
-  const { lane, laneW, color, labelX, unit } = useContext(MiniCtx);
+  const { lane, color, labelX, unit } = useContext(MiniCtx);
   const u = Math.max(unit, 1);
   return (
     <g>
-      <rect x={x + laneX(lane.get(id) ?? 0, laneW) - u} y={y + ROW_H / 2 - u * 0.6} width={2 * u} height={1.2 * u} fill={color.get(id) ?? "#888"} />
+      <rect x={x + laneX(lane.get(id) ?? 0) - u} y={y + ROW_H / 2 - u * 0.6} width={2 * u} height={1.2 * u} fill={color.get(id) ?? "#888"} />
       <rect x={x + labelX} y={y + ROW_H / 2 - u * 0.4} width={u * 36} height={0.8 * u} fill="rgb(70 78 86)" />
     </g>
   );
@@ -105,13 +98,11 @@ export default function CommitGraph({
   const [ready, setReady] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [box, setBox] = useState({ w: 0, h: 0 });
-  // The commit under the pointer: its edges to parents and children are drawn at full strength.
-  const [hover, setHover] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const instRef = useRef<ReactFlowInstance | null>(null);
 
-  // Lane index of every commit, and how many lanes this history really uses.
-  const { lanes, maxLane } = useMemo(() => {
+  // The commit table starts right of the last lane that really exists in this history.
+  const { labelX, lanes } = useMemo(() => {
     const lane = new Map<string, number>();
     let max = 0;
     for (const n of nodes) {
@@ -119,7 +110,10 @@ export default function CommitGraph({
       lane.set(n.id, l);
       if (l > max) max = l;
     }
-    return { lanes: lane, maxLane: max };
+    // Branchy histories always get at least three lane slots of room, so the topology never
+    // looks squeezed against the text; a linear history stays compact.
+    const slots = max === 0 ? 0 : Math.max(max, 3);
+    return { labelX: LANE_PAD + slots * LANE_W + 44, lanes: lane };
   }, [nodes]);
 
   // Track the workspace size so the table can fill it. Widths are rounded so a drag-resize
@@ -139,48 +133,36 @@ export default function CommitGraph({
   const mapVisible = showMap && overflowsView && nodes.length < 2500;
   // Controls and minimap live in their own right-hand gutter, so they never sit on top of commit text.
   const gutter = mapVisible ? MAP_W + 28 : 52;
-
-  // Branch topology gets the room it needs; the commit table starts right of the last lane.
-  const laneW = laneSpacing(maxLane, box.w);
-  const labelX = LANE_PAD + maxLane * laneW + LANES_TO_TABLE;
   const labelW = Math.min(LABEL_W_MAX, Math.max(LABEL_W_MIN, box.w - labelX - gutter - EDGE_PAD));
 
-  // Table columns: hash | refs | message | author | date. The refs column is as wide as the widest
-  // label set in the loaded history (so branch and tag labels line up in one column); the author
-  // column appears only when the message keeps a usable width.
-  const refsW = useMemo(() => {
-    let need = 0;
-    for (const n of nodes) {
-      let w = 0;
-      for (const b of n.data.branchNames) w += refLabelWidth(b);
-      for (const t of n.data.tagNames ?? []) w += refLabelWidth(t, true);
-      if (w > need) need = w;
-    }
-    if (need === 0) return 0;
-    return Math.min(need, REFS_MAX, Math.floor(labelW * 0.34));
-  }, [nodes, labelW]);
-  const fixedW = COL.hash + COL.date + (refsW > 0 ? refsW + COL.gap : 0) + 3 * COL.gap + 20;
-  const showAuthor = labelW - fixedW - COL.author - COL.gap >= MESSAGE_MIN;
-  // In a narrow table (inspector open, small window) the date goes before the message gets cramped.
-  const showDate = showAuthor || labelW - fixedW >= MESSAGE_MIN - 60;
-
   const refByName = useMemo(() => new Map(refs.map((r) => [r.name, r] as const)), [refs]);
+
+  // Branch labels per commit, and the one column width they all share (derived from this
+  // repository's real refs, so a history with no refs gets no refs column at all).
+  const { chipsById, refW } = useMemo(() => {
+    const byId = new Map<string, RefChip[]>();
+    let widest = 0;
+    for (const n of nodes) {
+      const chips: RefChip[] = n.data.branchNames.map((name) => {
+        const remote = !!refByName.get(name)?.remote;
+        return { name, remote, head: !remote && !!head?.branch && head.branch === name, color: model.colorOfRef({ name, remote }) };
+      });
+      // Checked-out branch first, then local, then remote-tracking.
+      chips.sort((a, b) => Number(b.head) - Number(a.head) || Number(a.remote) - Number(b.remote));
+      byId.set(n.id, chips);
+      const detached = !!head && !head.branch && head.hash === n.id ? 44 : 0;
+      widest = Math.max(widest, refsWidth(refItems(chips, n.data.tagNames)) + detached);
+    }
+    return { chipsById: byId, refW: widest === 0 ? 0 : Math.round(Math.min(widest, 264)) };
+  }, [nodes, refByName, head, model]);
+
+  // On a narrow view the refs column gives way first, so the message and date keep their room.
+  const refColW = refW > 0 ? Math.min(refW, Math.max(72, labelW - 300)) : 0;
 
   const flowNodes: Node<RowData>[] = useMemo(
     () =>
       nodes.map((n) => {
-        const chips: RefChip[] = n.data.branchNames.map((name) => {
-          const r = refByName.get(name);
-          const remote = !!r?.remote;
-          return {
-            name,
-            remote,
-            head: !remote && !!head?.branch && head.branch === name,
-            color: model.colorOfRef({ name, remote }),
-          };
-        });
-        // Checked-out branch first, then local, then remote-tracking.
-        chips.sort((a, b) => Number(b.head) - Number(a.head) || Number(a.remote) - Number(b.remote));
+        const chips = chipsById.get(n.id) ?? [];
         const sideIdx = compareMode ? highlightedHashes.indexOf(n.id) : -1;
         return {
           id: n.id,
@@ -190,20 +172,15 @@ export default function CommitGraph({
           selectable: false,
           focusable: false,
           selected: highlightedHashes.includes(n.id),
-          // Dots sit above every edge, so the crossing underlay of an edge can never cut into a commit.
-          zIndex: 10,
           hidden: !!hiddenHashes?.has(n.id),
           style: { width: labelX + labelW, height: ROW_H },
           data: {
             ...n.data,
             lane: lanes.get(n.id) ?? 0,
-            laneW,
             color: model.colorOf(n.id),
             labelX,
             labelW,
-            refsW,
-            showAuthor,
-            showDate,
+            refW: refColW,
             chips,
             detachedHead: !!head && !head.branch && head.hash === n.id,
             faded: !!ancestry && !ancestry.has(n.id),
@@ -212,7 +189,7 @@ export default function CommitGraph({
           },
         };
       }),
-    [nodes, refByName, head, model, labelX, labelW, laneW, refsW, showAuthor, showDate, lanes, highlightedHashes, compareMode, ancestry, matchedHashes, hiddenHashes]
+    [nodes, chipsById, refColW, head, model, labelX, labelW, lanes, highlightedHashes, compareMode, ancestry, matchedHashes, hiddenHashes]
   );
 
   const yById = useMemo(() => new Map(nodes.map((n) => [n.id, n.position.y] as const)), [nodes]);
@@ -224,10 +201,7 @@ export default function CommitGraph({
       const color = kind === "merge" ? model.colorOf(e.target) : model.colorOf(e.source);
       const dimmed = !!matchedHashes && !(matchedHashes.has(e.source) && matchedHashes.has(e.target));
       const inAncestry = !ancestry || (ancestry.has(e.source) && ancestry.has(e.target));
-      // Pointing at a commit: its own edges (to parents and children) stay bright, the rest recede.
-      const touchesHover = !!hover && (e.source === hover || e.target === hover);
-      const base = dimmed ? 0.12 : inAncestry ? 1 : 0.22;
-      const opacity = hover && !touchesHover ? base * 0.4 : base;
+      const opacity = dimmed ? 0.12 : inAncestry ? 1 : 0.22;
       return {
         id: e.id,
         source: e.source,
@@ -235,29 +209,31 @@ export default function CommitGraph({
         type: "commit",
         focusable: false,
         hidden: !!(hiddenHashes && (hiddenHashes.has(e.source) || hiddenHashes.has(e.target))),
-        zIndex: touchesHover ? 3 : ancestry && inAncestry && !dimmed ? 2 : 1,
         data: {
-          sx: laneX(lanes.get(e.source) ?? 0, laneW),
+          sx: laneX(lanes.get(e.source) ?? 0),
           sy: (yById.get(e.source) ?? 0) + ROW_H / 2,
-          tx: laneX(lanes.get(e.target) ?? 0, laneW),
+          tx: laneX(lanes.get(e.target) ?? 0),
           ty: (yById.get(e.target) ?? 0) + ROW_H / 2,
           kind,
           color,
           opacity,
-          width: touchesHover || (ancestry && inAncestry) ? 2.5 : 2,
+          width: ancestry && inAncestry ? 2.75 : 2.25,
         },
       } as Edge<EdgeData>;
     });
-    return out;
-  }, [edges, model, lanes, laneW, yById, matchedHashes, ancestry, hiddenHashes, hover]);
+    // Every edge stays in React Flow's base layer, below the commit dots. Within it, later edges
+    // paint over earlier ones, so emphasised (ancestry) edges are placed last.
+    const emphasis = (e: Edge<EdgeData>) => (e.data!.opacity >= 1 ? 1 : 0);
+    return out.sort((a, b) => emphasis(a) - emphasis(b));
+  }, [edges, model, lanes, yById, matchedHashes, ancestry, hiddenHashes]);
 
   const mini = useMemo<MiniCtxValue>(() => {
     const color = new Map<string, string>();
     for (const n of nodes) color.set(n.id, model.colorOf(n.id));
     // The minimap fits the whole graph into MAP_W x MAP_H; its scale is set by the tighter axis.
     const unit = Math.max((labelX + labelW) / MAP_W, (nodes.length * ROW_H) / MAP_H);
-    return { lane: lanes, laneW, color, labelX, unit };
-  }, [nodes, model, lanes, laneW, labelX, labelW]);
+    return { lane: lanes, color, labelX, unit };
+  }, [nodes, model, lanes, labelX, labelW]);
 
   function handleInit(instance: ReactFlowInstance) {
     instRef.current = instance;
@@ -292,8 +268,6 @@ export default function CommitGraph({
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           onNodeClick={(_, node) => onSelectCommit(node.id)}
-          onNodeMouseEnter={(_, node) => setHover(node.id)}
-          onNodeMouseLeave={() => setHover(null)}
           onInit={handleInit}
           minZoom={0.05}
           maxZoom={2}
@@ -362,14 +336,14 @@ function GraphControls({
   }
 
   return (
-    <div role="toolbar" aria-label="Graph view" aria-orientation="vertical" className="panel rounded-lg p-1 flex flex-col items-center gap-0.5">
+    <div role="toolbar" aria-label="Graph view" aria-orientation="vertical" className="panel rounded-lg p-0.5 flex flex-col items-center gap-0.5">
       <button className={btn} onClick={() => rf.zoomIn({ duration: 120 })} aria-label="Zoom in" title="Zoom in">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
           <path d="M3.5 8h9M8 3.5v9" />
         </svg>
       </button>
       <button
-        className={`${btn} font-mono text-2xs tabular-nums`}
+        className={`${btn} font-mono text-caption tabular-nums`}
         onClick={() => rf.zoomTo(1, { duration: 120 })}
         aria-label={`Zoom ${zoomPct}%. Reset to 100%`}
         title="Reset to 100%"
@@ -381,7 +355,7 @@ function GraphControls({
           <path d="M3.5 8h9" />
         </svg>
       </button>
-      <span className="h-1" aria-hidden />
+      <span className="h-px w-5 bg-line my-0.5" aria-hidden />
       <button className={btn} onClick={fitWidth} aria-label="Fit graph to width" title="Fit to width">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M2.5 3v10M13.5 3v10M5.5 8h5M7.2 6.3 5.5 8l1.7 1.7M8.8 6.3 10.5 8 8.8 9.7" />
@@ -409,7 +383,7 @@ function GraphControls({
       </button>
       {canMap && (
         <>
-          <span className="h-1" aria-hidden />
+          <span className="h-px w-5 bg-line my-0.5" aria-hidden />
           <button
             className={`${btn} ${showMap ? "text-fg" : ""}`}
             onClick={onToggleMap}

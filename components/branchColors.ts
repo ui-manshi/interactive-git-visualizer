@@ -16,25 +16,20 @@ export interface RefInfo {
 }
 
 /**
- * Index 0 is the trunk, drawn in neutral ink: the main line is the "paper" the rest of the
- * history is written on. Side branches take the hues. Teal is deliberately absent: it is the
- * interface accent (selection, focus, primary actions), so on the graph it never means "a branch".
+ * Branch colours. The interface accent (teal) is deliberately absent: teal means "you can act
+ * here", so a colour in the graph can only ever mean "this is a branch". Blue goes to the
+ * trunk (main/master), then the rest in order of recency.
  */
 export const BRANCH_PALETTE = [
-  "#B4BCC8", // trunk: neutral ink
-  "#A78BE3", // violet
   "#6FA3EF", // blue
+  "#A78BE3", // violet
   "#D9A441", // amber
-  "#D9798B", // rose
   "#8CB369", // green
+  "#D9798B", // rose
+  "#4FB3CF", // cyan
   "#C58F6B", // copper
+  "#C2B86A", // sand
 ];
-
-/** Palette member for the n-th identity; the trunk colour is never reused for a side branch. */
-export function paletteAt(i: number): string {
-  if (i <= 0) return BRANCH_PALETTE[0];
-  return BRANCH_PALETTE[1 + ((i - 1) % (BRANCH_PALETTE.length - 1))];
-}
 
 export interface BranchModel {
   /** Identity (branch name) of a commit. */
@@ -124,7 +119,7 @@ export function computeBranchModel(
   }
 
   const idx = new Map(identities.map((id, i) => [id, i] as const));
-  const color = (id: string | undefined) => paletteAt((id !== undefined ? idx.get(id) : undefined) ?? 0);
+  const color = (id: string | undefined) => BRANCH_PALETTE[((id !== undefined ? idx.get(id) : undefined) ?? 0) % BRANCH_PALETTE.length];
 
   return {
     identityOf: (h) => identityByHash.get(h),

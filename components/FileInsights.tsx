@@ -61,23 +61,23 @@ export function BlameView({
     `/api/repo/blame?path=${encodeURIComponent(repoPath)}&commit=${commitHash}&file=${encodeURIComponent(file)}`
   );
 
-  if (error) return <p className="p-3 text-sm text-del">{error}</p>;
-  if (!data) return <p className="p-3 text-sm text-muted">Working out who wrote each line…</p>;
+  if (error) return <p className="p-3 text-body text-del">{error}</p>;
+  if (!data) return <p className="p-3 text-body text-muted">Working out who wrote each line…</p>;
 
   return (
     <div>
-      <p className="px-3 py-2 text-xs text-muted m-0">
+      <p className="px-3 py-2 text-body text-muted m-0">
         {data.lines.length} lines from {data.commits.length} commit{data.commits.length === 1 ? "" : "s"}. Each
         block shows the commit that last changed those lines.
         {data.approximate && " Some diffs were too large to align exactly, so a few lines may be attributed to a later commit."}
       </p>
-      <table className="w-full text-xs font-mono border-collapse">
+      <table className="w-full text-body font-mono border-collapse">
         <tbody>
           {data.lines.map((l, i) => {
             const start = i === 0 || data.lines[i - 1].c !== l.c;
             const c = data.commits[l.c];
             return (
-              <tr key={i} className={start && i > 0 ? "border-t border-white/[0.07]" : ""}>
+              <tr key={i} className={start && i > 0 ? "mt-px" : ""}>
                 <td
                   className="w-40 max-w-[10rem] pl-2 pr-2 align-top whitespace-nowrap"
                   style={{ borderLeft: `3px solid ${laneColor(l.c)}` }}
@@ -96,7 +96,7 @@ export function BlameView({
                       </span>
                     </div>
                   )}
-                  {start && <div className="text-2xs text-faint font-sans">{ago(c.timestamp)}</div>}
+                  {start && <div className="text-caption text-faint font-sans">{ago(c.timestamp)}</div>}
                 </td>
                 <td className="w-10 pr-2 text-right text-faint select-none align-top">{i + 1}</td>
                 <td className="whitespace-pre-wrap break-all text-fg pr-2 align-top">{l.text || " "}</td>
@@ -152,17 +152,17 @@ export function FileHistoryView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, highlight]);
 
-  if (error) return <p className="p-3 text-sm text-del">{error}</p>;
-  if (!data) return <p className="p-3 text-sm text-muted">Searching history…</p>;
+  if (error) return <p className="p-3 text-body text-del">{error}</p>;
+  if (!data) return <p className="p-3 text-body text-muted">Searching history…</p>;
 
   return (
     <div>
       <div className="px-3 py-2 flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-xs text-muted m-0">
+        <p className="text-body text-muted m-0">
           {data.totalChanges} commit{data.totalChanges === 1 ? "" : "s"} changed this file
           {data.truncated && " (history scan stopped early)"}. Renames are not followed.
         </p>
-        <label className="flex items-center gap-1.5 text-xs text-fg cursor-pointer">
+        <label className="flex items-center gap-1.5 text-body text-fg cursor-pointer">
           <input
             type="checkbox"
             checked={highlight}
@@ -179,15 +179,15 @@ export function FileHistoryView({
             <li key={c.hash}>
               <button
                 onClick={() => onGoToCommit?.(c.hash)}
-                className="w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-raised border-b border-white/[0.06]"
+                className="w-full text-left px-3 py-2 flex items-start gap-2 hover:bg-raised"
               >
-                <span className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded text-2xs font-bold flex items-center justify-center ${st.cls}`} title={c.status}>
+                <span className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded text-caption font-bold flex items-center justify-center ${st.cls}`} title={c.status}>
                   {st.letter}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm text-fg truncate">{c.message}</span>
-                  <span className="block text-2xs text-muted truncate">
-                    <span className="font-mono text-accent">{c.hash.slice(0, 7)}</span> · {c.author} · {ago(c.timestamp)}
+                  <span className="block text-body text-fg truncate">{c.message}</span>
+                  <span className="block text-caption text-muted truncate">
+                    <span className="font-mono text-fg">{c.hash.slice(0, 7)}</span> · {c.author} · {ago(c.timestamp)}
                   </span>
                 </span>
               </button>

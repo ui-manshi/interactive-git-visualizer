@@ -101,7 +101,7 @@ export default function VisualizerPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen text-muted p-8 text-sm">Loading…</main>
+        <main className="min-h-screen text-muted p-8 text-body">Loading…</main>
       }
     >
       <VisualizerContent />
@@ -655,12 +655,12 @@ function VisualizerContent() {
         <Brand compact />
         <ToolbarDivider />
         <div className="flex items-center gap-2 min-w-0 flex-1" aria-live="polite">
-          <span className="text-sm font-medium truncate min-w-0" title={repoPath}>
+          <span className="font-mono text-body truncate min-w-0" title={repoPath}>
             {loading ? "Reading repository…" : error ? "Could not open this repository" : repoName}
           </span>
           {ready && head && (
             <span
-              className="flex-none hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-raised text-xs text-muted"
+              className="flex-none hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-raised text-caption text-muted"
               title={head.branch ? `Checked out: ${head.branch}` : `HEAD is detached at ${head.hash}`}
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
@@ -669,14 +669,14 @@ function VisualizerContent() {
                 <circle cx="12" cy="6" r="1.6" />
                 <path d="M4 5.1v5.8M12 7.6c0 2.4-3 2.2-6.4 3.6" />
               </svg>
-              <span className="font-mono max-w-[12rem] truncate">{head.branch ?? `detached ${head.hash?.slice(0, 7)}`}</span>
+              <span className="font-mono max-w-[14rem] truncate">{head.branch ?? `detached ${head.hash?.slice(0, 7)}`}</span>
             </span>
           )}
         </div>
 
         {ready && (
           <>
-            <div role="group" aria-label="View" className="segmented flex text-sm rounded-md overflow-hidden flex-none">
+            <div role="group" aria-label="View" className="segmented flex text-body rounded-md overflow-hidden flex-none">
               {(["graph", "stats"] as View[]).map((v) => (
                 <button
                   key={v}
@@ -693,7 +693,7 @@ function VisualizerContent() {
               onClick={toggleCompareMode}
               aria-pressed={compareMode}
               title="Compare two commits (m)"
-              className={`${compareMode ? "border border-accent text-accent bg-accent/10" : "btn"} h-8 px-2.5 rounded-md text-sm inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
+              className={`${compareMode ? "border border-accent text-accent bg-accent/10" : "btn"} h-8 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M4 2.5v8M4 10.5a2 2 0 1 0 0 3 2 2 0 0 0 0-3ZM12 13.5v-8M12 5.5a2 2 0 1 0 0-3 2 2 0 0 0 0 3Z" />
@@ -705,19 +705,19 @@ function VisualizerContent() {
 
         {/* Secondary actions: quiet and inline when there is room, one overflow menu otherwise. */}
         <div className="hidden xl:flex items-center gap-0.5 flex-none">
-          <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-sm inline-flex items-center">
+          <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-body inline-flex items-center">
             Simulator
           </Link>
-          <Link href="/" className="btn-ghost h-8 px-2.5 rounded-md text-sm inline-flex items-center">
+          <Link href="/" className="btn-ghost h-8 px-2.5 rounded-md text-body inline-flex items-center">
             New repository
           </Link>
           {ready && (
             <>
-              <button onClick={copyLink} className="btn-ghost h-8 px-2.5 rounded-md text-sm" title="Copy a link to this exact view">
+              <button onClick={copyLink} className="btn-ghost h-8 px-2.5 rounded-md text-body" title="Copy a link to this exact view">
                 {linkCopied ? "Link copied" : "Copy link"}
               </button>
               <IconButton label="Keyboard shortcuts (?)" onClick={() => setHelpOpen(true)}>
-                <span className="text-sm font-semibold">?</span>
+                <span className="text-body font-semibold">?</span>
               </IconButton>
             </>
           )}
@@ -751,24 +751,22 @@ function VisualizerContent() {
               : "max-xl:hidden"
           }`}
         >
-          <div className="flex-none px-3 pt-3 pb-4">
-            <p className="text-2xs text-faint m-0">Repository</p>
-            <p className="text-sm font-semibold m-0 mt-0.5 break-words" title={repoPath}>
+          <div className="flex-none px-4 pt-4 pb-3">
+            <p className="text-title font-semibold m-0 break-words" title={repoPath}>
               {repoName}
             </p>
             {repoPath && (
-              <p className="font-mono text-2xs text-faint m-0 mt-0.5 truncate" title={repoPath}>
+              <p className="font-mono text-caption text-faint m-0 mt-1 truncate" title={repoPath}>
                 {repoPath}
               </p>
             )}
             {!loading && !error && (
-              <p className="text-xs text-muted m-0 mt-2">
-                <span className="text-fg tabular-nums">{nodeCount.toLocaleString()}</span> commits ·{" "}
-                <span className="text-fg tabular-nums">{refs.length}</span> branch{refs.length === 1 ? "" : "es"}
+              <p className="font-mono text-caption text-muted m-0 mt-2 tabular-nums">
+                {nodeCount.toLocaleString()} commits · {refs.length} branch{refs.length === 1 ? "" : "es"}
               </p>
             )}
             {graph?.truncated && (
-              <div className="mt-2 text-2xs space-y-1.5">
+              <div className="mt-2 text-caption space-y-1.5">
                 <p className="text-warn m-0">
                   Showing the newest {nodeCount.toLocaleString()} of {graph.totalCommits.toLocaleString()} commits.
                 </p>
@@ -776,7 +774,7 @@ function VisualizerContent() {
                   <button
                     onClick={() => setMaxCommits(LOAD_STEPS.find((x) => x > maxCommits) ?? maxCommits)}
                     disabled={loadingMore}
-                    className="btn text-xs px-2.5 h-7 rounded-md"
+                    className="btn text-body px-2.5 h-7 rounded-md"
                   >
                     {loadingMore
                       ? "Loading…"
@@ -791,7 +789,7 @@ function VisualizerContent() {
 
           {/* The only scrolling region: branches, remotes and tags. */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1">
-            <RefSection title="Local branches" count={localRefs.length}>
+            <RefSection title="branches" count={localRefs.length}>
               {localRefs.map((ref) => (
                 <RefRow
                   key={ref.name}
@@ -807,7 +805,7 @@ function VisualizerContent() {
               ))}
             </RefSection>
             {remoteRefs.length > 0 && (
-              <RefSection title="Remote branches" count={remoteRefs.length}>
+              <RefSection title="remotes" count={remoteRefs.length}>
                 {remoteRefs.map((ref) => (
                   <RefRow
                     key={ref.name}
@@ -824,7 +822,7 @@ function VisualizerContent() {
               </RefSection>
             )}
             {tags.length > 0 && (
-              <RefSection title="Tags" count={tags.length}>
+              <RefSection title="tags" count={tags.length}>
                 {tags.map((t) => {
                   const loaded = nodeById.has(t.hash);
                   return (
@@ -837,13 +835,13 @@ function VisualizerContent() {
                           ? `${t.annotated ? "Annotated tag" : "Tag"} ${t.name}${t.message ? `: ${t.message}` : ""}`
                           : "This commit is older than the history loaded so far"
                       }
-                      className="w-full text-left flex items-center gap-2 h-7 px-3 text-sm hover:bg-raised disabled:opacity-40 disabled:hover:bg-transparent"
+                      className="w-full text-left flex items-center gap-2 h-7 px-4 text-body hover:bg-raised disabled:opacity-40 disabled:hover:bg-transparent"
                     >
                       <span className={`flex-none ${isReleaseTag(t.name) ? "text-warn" : "text-faint"}`}>
                         <FlagIcon size={12} />
                       </span>
                       <span className="truncate flex-1 min-w-0">{t.name}</span>
-                      <span className="font-mono text-2xs text-faint flex-none">{t.hash.slice(0, 7)}</span>
+                      <span className="font-mono text-caption text-faint flex-none">{t.hash.slice(0, 7)}</span>
                     </button>
                   );
                 })}
@@ -852,23 +850,23 @@ function VisualizerContent() {
           </div>
 
           {/* Fixed footer: comparison controls and legend never overlap the list above. */}
-          <div className="flex-none pt-1">
+          <div className="flex-none pt-2">
             {refs.length >= 2 && (
               <details open className="group">
-                <summary className="h-8 px-3 flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none hover:text-fg list-none [&::-webkit-details-marker]:hidden">
+                <summary className="h-8 px-4 flex items-center gap-1.5 font-mono text-caption text-muted cursor-pointer select-none hover:text-fg list-none [&::-webkit-details-marker]:hidden">
                   <svg className="transition-transform group-open:rotate-90" width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
                     <path d="M3 1.5 7 5 3 8.5z" />
                   </svg>
                   Compare branches
                 </summary>
-                <div className="px-3 pb-3 space-y-1.5">
+                <div className="px-4 pb-3 space-y-1.5">
                   {(["base", "head"] as const).map((side) => (
                     <select
                       key={side}
                       value={cmpDraft[side]}
                       onChange={(e) => setCmpDraft((d) => ({ ...d, [side]: e.target.value }))}
                       aria-label={side === "base" ? "Base branch" : "Branch to compare"}
-                      className="field w-full rounded-md px-2 h-8 text-xs"
+                      className="field w-full rounded-md px-2 h-8 text-body"
                     >
                       {refs.map((r) => (
                         <option key={r.name} value={r.name}>
@@ -886,14 +884,14 @@ function VisualizerContent() {
                       setCompareHash(null);
                       setBranchCmp({ ...cmpDraft });
                     }}
-                    className="btn w-full text-xs h-8 rounded-md"
+                    className="btn w-full text-body h-8 rounded-md"
                   >
                     Compare
                   </button>
                 </div>
               </details>
             )}
-            <div className="px-3 py-2.5 text-2xs text-faint space-y-1.5" aria-label="Legend">
+            <div className="px-4 pt-2 pb-4 font-mono text-caption text-faint space-y-2" aria-label="Legend">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-muted" aria-hidden /> commit
@@ -902,12 +900,12 @@ function VisualizerContent() {
                   <span className="w-2.5 h-2.5 rounded-full border-2 border-muted" aria-hidden /> merge
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="px-1.5 rounded text-2xs font-semibold bg-muted text-ground">checked out</span>
-                <span className="px-1.5 rounded text-2xs border border-muted/50 text-muted bg-muted/10">local</span>
-                <span className="px-1.5 rounded text-2xs border border-dashed border-muted/60 text-muted">remote</span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-sans">
+                <span className="px-1.5 rounded text-caption font-semibold bg-muted text-ground">checked out</span>
+                <span className="px-1.5 rounded text-caption bg-muted/20 text-muted">local</span>
+                <span className="px-1.5 rounded text-caption border border-dashed border-muted/60 text-muted">remote</span>
               </div>
-              <p className="m-0">Newest at the top. Colour follows the branch.</p>
+              <p className="m-0 font-sans">Newest first. Colour follows the branch.</p>
             </div>
           </div>
         </nav>
@@ -920,8 +918,8 @@ function VisualizerContent() {
                 className="w-6 h-6 rounded-full border-2 border-line border-t-accent animate-spin motion-reduce:animate-none"
                 aria-hidden
               />
-              <p className="text-sm text-fg m-0">Reading the commit history…</p>
-              <p className="text-xs text-muted max-w-sm m-0">
+              <p className="text-body text-fg m-0">Reading the commit history…</p>
+              <p className="text-body text-muted max-w-sm m-0">
                 A GitHub URL is cloned the first time you open it, so larger repositories take longer.
               </p>
             </div>
@@ -930,13 +928,13 @@ function VisualizerContent() {
           {!loading && error && (
             <div className="absolute inset-0 flex items-center justify-center p-8">
               <div className="max-w-md w-full rounded-lg border border-del/40 bg-del/10 p-5" role="alert">
-                <p className="text-sm font-semibold text-del m-0">Could not open this repository</p>
-                <p className="text-sm text-fg/90 mt-2 mb-0 break-words">{error}</p>
-                <p className="text-xs text-muted mt-3 mb-0">
+                <p className="text-body font-semibold text-del m-0">Could not open this repository</p>
+                <p className="text-body text-fg/90 mt-2 mb-0 break-words">{error}</p>
+                <p className="text-body text-muted mt-3 mb-0">
                   Check that the path is absolute and points to a folder with a .git directory, or that the
                   GitHub URL is public.
                 </p>
-                <Link href="/" className="btn-primary inline-flex items-center mt-4 text-xs px-3 h-8 rounded-md">
+                <Link href="/" className="btn-primary inline-flex items-center mt-4 text-body px-3 h-8 rounded-md">
                   Try another repository
                 </Link>
               </div>
@@ -945,7 +943,7 @@ function VisualizerContent() {
 
           {!loading && !error && graph && nodeCount === 0 && (
             <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
-              <p className="text-muted text-sm max-w-md m-0">
+              <p className="text-muted text-body max-w-md m-0">
                 No commits found. The repository may be empty, or an earlier clone may be incomplete — reload
                 the page to try again.
               </p>
@@ -971,10 +969,10 @@ function VisualizerContent() {
                 inputRef={searchRef}
               />
               {compareMode && !comparing && (
-                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-xs bg-accent/10 text-fg" role="status">
+                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-body bg-accent/10 text-fg" role="status">
                   {selectedHash ? (
                     <>
-                      Base is <span className="font-mono text-accent">{selectedHash.slice(0, 7)}</span>. Now click the commit to compare it with.
+                      Base is <span className="font-mono text-fg">{selectedHash.slice(0, 7)}</span>. Now click the commit to compare it with.
                     </>
                   ) : (
                     "Compare mode: click the first commit (the base)."
@@ -982,17 +980,17 @@ function VisualizerContent() {
                 </div>
               )}
               {fileSet && (
-                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-xs bg-raised text-fg" role="status">
+                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-body bg-raised text-fg" role="status">
                   <span className="min-w-0 truncate">
-                    Highlighting commits that changed <span className="font-mono text-accent">{fileSet.file}</span>
+                    Highlighting commits that changed <span className="font-mono text-fg">{fileSet.file}</span>
                   </span>
-                  <button onClick={() => setFileSet(null)} className="btn-ghost h-6 px-2 rounded text-xs flex-none">
+                  <button onClick={() => setFileSet(null)} className="btn-ghost h-6 px-2 rounded text-body flex-none">
                     Clear
                   </button>
                 </div>
               )}
               {loadingMore && (
-                <div className="flex-none px-3 min-h-8 flex items-center text-xs text-muted bg-raised" role="status">
+                <div className="flex-none px-3 min-h-8 flex items-center text-body text-muted bg-raised" role="status">
                   Loading more commits…
                 </div>
               )}
@@ -1083,7 +1081,7 @@ function VisualizerContent() {
               <>
                 <div className="flex-none px-4 pt-3 pb-2 flex items-start justify-between gap-3">
                   {comparing ? (
-                    <div className="flex items-center gap-2 text-xs font-mono min-w-0 flex-wrap">
+                    <div className="flex items-center gap-2 text-body font-mono min-w-0 flex-wrap">
                       <span className="px-2 py-1 rounded-md bg-accent/15 text-accent border border-accent/40">A {selectedHash!.slice(0, 7)}</span>
                       <button
                         onClick={swapSides}
@@ -1097,10 +1095,10 @@ function VisualizerContent() {
                     </div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-lg font-semibold leading-snug m-0 break-words line-clamp-4" title={subject}>
+                      <h2 className="text-[15px] font-semibold leading-snug m-0 break-words line-clamp-4" title={subject}>
                         {selectedCommit ? subject || "(no message)" : "Loading commit…"}
                       </h2>
-                      <div className="mt-1 flex items-center gap-1 text-xs text-muted min-w-0">
+                      <div className="mt-1 flex items-center gap-1 text-body text-muted min-w-0">
                         <span className="font-mono">{selectedHash!.slice(0, 7)}</span>
                         <CopyButton text={selectedHash!} label="Copy full hash" />
                       </div>
@@ -1124,14 +1122,14 @@ function VisualizerContent() {
                   </div>
                 </div>
 
-                <div role="tablist" aria-label="Inspector views" className="flex-none px-3 flex gap-0.5">
+                <div role="tablist" aria-label="Inspector views" className="flex-none px-3 flex gap-1">
                   {TABS.map((t) => (
                     <button
                       key={t}
                       role="tab"
                       aria-selected={tab === t}
                       onClick={() => setTab(t)}
-                      className={`px-2.5 h-9 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                      className={`px-2.5 h-9 text-body font-medium border-b-2 -mb-px transition-colors ${
                         tab === t ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg"
                       }`}
                     >
@@ -1143,12 +1141,12 @@ function VisualizerContent() {
                 <div className="flex-1 min-h-0 overflow-y-auto p-4">
                   {tab === "details" && (
                     <>
-                      {detailError && <p className="text-del text-sm m-0">{detailError}</p>}
-                      {!selectedCommit && !detailError && <p className="text-muted text-sm m-0">Loading…</p>}
+                      {detailError && <p className="text-del text-body m-0">{detailError}</p>}
+                      {!selectedCommit && !detailError && <p className="text-muted text-body m-0">Loading…</p>}
                       {selectedCommit && (
                         <div className="space-y-5">
                           {showFullMessage && (
-                            <pre className="inset whitespace-pre-wrap break-words font-sans text-sm text-fg leading-relaxed rounded-lg p-3 m-0 max-h-72 overflow-y-auto">
+                            <pre className="inset whitespace-pre-wrap break-words font-sans text-body text-fg leading-relaxed rounded-lg p-3 m-0 max-h-72 overflow-y-auto">
                               {bodyText}
                             </pre>
                           )}
@@ -1167,7 +1165,7 @@ function VisualizerContent() {
                             </MetaRow>
                             <MetaRow label="Tree">
                               <HashValue value={selectedCommit.tree} copyLabel="Copy full tree hash" />
-                              <button onClick={() => setTab("files")} className="text-xs text-accent hover:underline mt-0.5">
+                              <button onClick={() => setTab("files")} className="text-body text-accent hover:underline mt-0.5">
                                 Browse files at this commit
                               </button>
                             </MetaRow>
@@ -1184,15 +1182,15 @@ function VisualizerContent() {
                                             handleSelectCommit(p);
                                             setFocus({ hash: p, n: Date.now() });
                                           }}
-                                          className="font-mono text-xs leading-5 text-accent hover:underline flex-none"
+                                          className="font-mono text-body leading-5 text-accent hover:underline flex-none"
                                           title={`Go to parent ${p}`}
                                         >
                                           {p.slice(0, 7)}
                                         </button>
                                       ) : (
-                                        <span className="font-mono text-xs leading-5 flex-none">{p.slice(0, 7)}</span>
+                                        <span className="font-mono text-body leading-5 flex-none">{p.slice(0, 7)}</span>
                                       )}
-                                      <span className="font-mono text-xs leading-5 text-faint break-all min-w-0 select-all">{p}</span>
+                                      <span className="font-mono text-body leading-5 text-faint break-all min-w-0 select-all">{p}</span>
                                       <CopyButton text={p} label="Copy full parent hash" />
                                     </div>
                                   ))}
@@ -1212,14 +1210,14 @@ function VisualizerContent() {
                   {tab === "files" && filesHash && (
                     <div className="flex flex-col gap-3 h-full">
                       {comparing && (
-                        <div className="flex gap-1 text-xs flex-shrink-0">
+                        <div className="flex gap-1 text-body flex-shrink-0">
                           {(["A", "B"] as const).map((side) => (
                             <button
                               key={side}
                               onClick={() => setFilesSide(side)}
                               aria-pressed={filesSide === side}
-                              className={`px-2.5 h-7 rounded-md border ${
-                                filesSide === side ? "border-accent text-fg bg-accent/10" : "border-line text-muted hover:text-fg"
+                              className={`px-2.5 h-7 rounded-md ${
+                                filesSide === side ? "ring-1 ring-inset ring-accent text-fg bg-accent/10" : "btn text-muted hover:text-fg"
                               }`}
                             >
                               Files at {side}
@@ -1242,7 +1240,7 @@ function VisualizerContent() {
                     <>
                       {diffTo ? (
                         <>
-                          <p className="text-xs text-muted mt-0 mb-3 break-words">{diffLabel}</p>
+                          <p className="text-body text-muted mt-0 mb-3 break-words">{diffLabel}</p>
                           <DiffViewer
                             repoPath={repoPath}
                             from={diffFrom}
@@ -1252,7 +1250,7 @@ function VisualizerContent() {
                           />
                         </>
                       ) : (
-                        <p className="text-muted text-sm m-0">Loading…</p>
+                        <p className="text-muted text-body m-0">Loading…</p>
                       )}
                     </>
                   )}
@@ -1270,7 +1268,7 @@ function VisualizerContent() {
 function RefSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
     <section aria-label={title} className="pb-1">
-      <h3 className="sticky top-0 z-10 bg-surface px-3 h-7 flex items-center justify-between text-2xs font-medium text-faint m-0">
+      <h3 className="sticky top-0 z-10 bg-surface px-4 h-8 flex items-center justify-between font-mono text-caption text-faint m-0">
         <span>{title}</span>
         <span className="tabular-nums">{count}</span>
       </h3>
@@ -1304,7 +1302,7 @@ function RefRow({
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       title={`${ref_.name} @ ${ref_.hash}${isHead ? " (checked out)" : ""}`}
-      className={`w-full text-left flex items-center gap-2 h-7 px-3 text-sm hover:bg-raised ${
+      className={`w-full text-left flex items-center gap-2 h-7 px-4 text-body hover:bg-raised ${
         selected ? "bg-raised shadow-[inset_2px_0_0_rgb(var(--accent))]" : ""
       }`}
     >
@@ -1318,9 +1316,9 @@ function RefRow({
         {rest}
       </span>
       {isHead && (
-        <span className="flex-none text-2xs font-semibold px-1 rounded border border-line text-muted leading-4">HEAD</span>
+        <span className="flex-none font-mono text-caption px-1 rounded bg-raised text-muted leading-4">HEAD</span>
       )}
-      <span className="font-mono text-2xs text-faint flex-none">{ref_.hash.slice(0, 7)}</span>
+      <span className="font-mono text-caption text-faint flex-none">{ref_.hash.slice(0, 7)}</span>
     </button>
   );
 }

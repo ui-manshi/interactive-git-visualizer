@@ -29,22 +29,22 @@ export default function HomePage() {
       <Toolbar>
         <Brand />
         <span className="flex-1" />
-        <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-sm inline-flex items-center">
+        <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-body inline-flex items-center">
           Simulator
         </Link>
       </Toolbar>
 
       <main className="flex-1 px-4 sm:px-8 lg:px-16 py-12 sm:py-20">
         <div className="max-w-[40rem]">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight leading-tight m-0">Open a Git repository</h1>
-          <p className="text-lg text-muted leading-relaxed mt-4 mb-0 max-w-[52ch]">
+          <h1 className="text-display sm:text-display font-semibold tracking-tight leading-tight m-0">Open a Git repository</h1>
+          <p className="text-[15px] text-muted leading-relaxed mt-4 mb-0 max-w-[52ch]">
             Follow every branch and merge, browse the files as they were at any commit, and compare any two commits line by
             line. Works with a local folder or a public GitHub URL.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8">
-            <label htmlFor="repo" className="block text-sm font-medium mb-2">
-              Repository path or GitHub URL
+            <label htmlFor="repo" className="block font-mono text-caption text-muted mb-2">
+              repository path or github url
             </label>
             <div className="flex flex-col sm:flex-row gap-2">
               <input
@@ -56,25 +56,25 @@ export default function HomePage() {
                 autoComplete="off"
                 spellCheck={false}
                 autoFocus
-                className="field flex-1 min-w-0 rounded-lg px-3.5 h-11 text-sm font-mono placeholder:text-faint"
+                className="field flex-1 min-w-0 rounded-lg px-3.5 h-11 text-body font-mono placeholder:text-faint"
               />
               <button
                 type="submit"
                 disabled={!repoPath.trim()}
-                className="btn-primary rounded-lg text-sm px-5 h-11 whitespace-nowrap"
+                className="btn-primary rounded-lg text-body px-5 h-11 whitespace-nowrap"
               >
                 Open repository
               </button>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-body text-muted">
               <span>No repo handy? Try</span>
               {EXAMPLE_REPOS.map((r) => (
                 <button
                   key={r.url}
                   type="button"
                   onClick={() => open(r.url)}
-                  className="btn font-mono text-xs px-2.5 h-7 rounded-md hover:text-accent"
+                  className="btn font-mono text-body px-2.5 h-7 rounded-md hover:text-accent"
                 >
                   {r.label}
                 </button>
@@ -82,7 +82,7 @@ export default function HomePage() {
             </div>
           </form>
 
-          <div className="mt-12 text-sm text-muted space-y-3">
+          <div className="mt-12 pt-6 border-t border-line text-body text-muted space-y-3">
             <p className="m-0">
               New to Git?{" "}
               <Link href="/simulator" className="text-accent hover:underline">
