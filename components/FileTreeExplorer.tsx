@@ -66,11 +66,21 @@ interface Props {
   onGoToCommit?: (hash: string) => void;
   /** Called with the commits that changed the open file so the graph can dim the rest; null clears it. */
   onFileHistory?: (file: string | null, hashes: Set<string> | null) => void;
+  /** Files this commit (or comparison) changed, by status. Used to mark them in the tree. */
+  changes?: Map<string, "added" | "modified" | "deleted"> | null;
+  /** Open a changed file in the Changes tab. */
+  onViewChanges?: (path: string) => void;
 }
 
 type FileView = "content" | "blame" | "history";
 
-export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, onFileHistory }: Props) {
+const STATUS_BADGE = {
+  added: { letter: "A", cls: "bg-add/15 text-add", label: "Added in this commit" },
+  modified: { letter: "M", cls: "bg-warn/15 text-warn", label: "Modified in this commit" },
+  deleted: { letter: "D", cls: "bg-del/15 text-del", label: "Deleted in this commit" },
+} as const;
+
+export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, onFileHistory, changes = null, onViewChanges }: Props) {
   const [fileView, setFileView] = useState<FileView>("content");
   const [files, setFiles] = useState<FlatFile[] | null>(null);
   const [truncated, setTruncated] = useState(false);
@@ -156,8 +166,18 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
     });
   }
 
+  // Folders that contain at least one changed file get a marker, so changes are visible even when collapsed.
+  const dirsWithChanges = new Set<string>();
+  if (changes) {
+    for (const p of changes.keys()) {
+      const parts = p.split("/");
+      for (let i = 1; i < parts.length; i++) dirsWithChanges.add(parts.slice(0, i).join("/"));
+    }
+  }
+
   function renderNode(node: TreeNode, depth: number): React.ReactNode {
     const isDir = !node.file;
+    const status = node.file ? changes?.get(node.path) : undefined;
     const isOpen = expanded.has(node.path);
     const isSelected = openFile?.path === node.path;
 
@@ -175,7 +195,19 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
             {isDir ? (isOpen ? "▾" : "▸") : ""}
           </span>
           <NodeIcon kind={isDir ? (isOpen ? "folder-open" : "folder") : node.file?.isSubmodule ? "link" : "file"} />
-          <span className="truncate">{node.name}</span>
+          <span className="truncate flex-1 min-w-0">{node.name}</span>
+          {isDir && !isOpen && dirsWithChanges.has(node.path) && (
+            <span className="w-1.5 h-1.5 rounded-full bg-warn flex-shrink-0" title="Contains changed files" aria-label="Contains changed files" />
+          )}
+          {status && (
+            <span
+              className={`flex-shrink-0 w-4 h-4 rounded text-caption font-bold flex items-center justify-center ${STATUS_BADGE[status].cls}`}
+              title={STATUS_BADGE[status].label}
+              aria-label={STATUS_BADGE[status].label}
+            >
+              {STATUS_BADGE[status].letter}
+            </span>
+          )}
           {node.file?.mode === "100755" && (
             <span className="text-caption text-muted flex-shrink-0">executable</span>
           )}
@@ -194,9 +226,17 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      <p className="text-body text-muted">
+      <p className="text-body text-muted m-0">
         {files.length} file{files.length === 1 ? "" : "s"} at this commit
         {truncated && " (listing truncated)"}
+        {changes && changes.size > 0 && (
+          <>
+            {" · "}
+            <span className="text-fg">{changes.size} changed</span>
+            {[...changes.values()].some((s) => s === "deleted") &&
+              ` (${[...changes.values()].filter((s) => s === "deleted").length} deleted, so not listed)`}
+          </>
+        )}
       </p>
 
       <div className="inset rounded-lg py-1 max-h-64 overflow-y-auto flex-shrink-0">
@@ -205,11 +245,11 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
 
       {openFile && (
         <div className="flex-1 min-h-0 flex flex-col inset rounded-lg overflow-hidden">
-          <div className="px-3 py-1.5 bg-raised flex items-center justify-between gap-2">
-            <span className="text-body font-mono text-fg/90 truncate" title={openFile.path}>
+          <div className="px-3 py-2 bg-raised flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+            <span className="text-body font-mono text-fg/90 min-w-0 basis-full [overflow-wrap:anywhere]" title={openFile.path}>
               {openFile.path}
             </span>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-wrap">
               {!openFile.isSubmodule && (
                 <div role="group" aria-label="File view" className="flex text-caption rounded segmented overflow-hidden">
                   {(["content", "blame", "history"] as FileView[]).map((v) => (
@@ -226,6 +266,11 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
               )}
               {blob && fileView === "content" && (
                 <span className="text-caption text-muted">{formatBytes(blob.size)}</span>
+              )}
+              {onViewChanges && changes?.has(openFile.path) && (
+                <button onClick={() => onViewChanges(openFile.path)} className="text-caption text-accent hover:underline whitespace-nowrap">
+                  View changes
+                </button>
               )}
             </div>
           </div>

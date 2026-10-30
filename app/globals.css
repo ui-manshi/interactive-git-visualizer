@@ -6,22 +6,23 @@
    structure comes from 1px borders, not shadows. Branch colours are defined
    in components/branchColors.ts so graph, sidebar and legend share one source. */
 :root {
-  --ground: 16 18 20; /* #101214 app background, graph canvas */
-  --surface: 23 26 29; /* #171A1D toolbar and sidebar */
-  --raised: 29 33 37; /* #1D2125 raised surface, selection */
-  --line: 48 54 60; /* #30363C borders and separators */
-  --fg: 229 231 235; /* #E5E7EB primary text */
-  --muted: 156 163 175; /* #9CA3AF secondary text */
-  --faint: 124 132 144; /* tertiary text, still above 4.5:1 on ground */
-  --accent: 98 199 178; /* #62C7B2 the only interface accent */
+  /* Surfaces step up in lightness: ground < surface < raised < hover. */
+  --ground: 16 19 23; /* #101317 app background, graph canvas */
+  --surface: 21 25 31; /* #15191F header, sidebar, cards */
+  --raised: 27 32 40; /* #1B2028 elevated panels, selection */
+  --hover: 36 43 53; /* #242B35 hover surfaces */
+  --line: 48 56 68; /* #303844 subtle borders */
+  --fg: 241 245 249; /* #F1F5F9 primary text */
+  --muted: 161 172 187; /* #A1ACBB secondary text */
+  --faint: 119 131 151; /* #778397 metadata (4.8:1 on ground) */
+  --accent: 122 167 255; /* #7AA7FF the interface accent: actions and selection */
 
-  /* Semantic, not decorative: diff and status colours */
-  --add: 104 184 124;
-  --del: 226 111 120;
-  --warn: 217 164 65;
-  /* Branch palette members that also appear in the interface */
-  --violet: 167 139 227;
-  --blue: 111 163 239;
+  /* Semantic */
+  --add: 84 214 176; /* #54D6B0 success, additions */
+  --del: 240 120 134; /* #F07886 error, deletions */
+  --warn: 242 188 102; /* #F2BC66 warning */
+  --violet: 167 139 250;
+  --blue: 122 167 255;
 
   --ease: 150ms ease;
   color-scheme: dark;
@@ -50,6 +51,12 @@ body {
   /* Surfaces: separated by lightness and spacing. Only floating layers and inputs get an outline. */
   .panel {
     background-color: rgb(var(--surface));
+  }
+  /* Content card: surface, subtle border, 8px radius. Used for dashboard sections. */
+  .card {
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--line) / 0.75);
+    border-radius: 10px;
   }
   .popover {
     background-color: rgb(var(--raised));
@@ -86,7 +93,7 @@ body {
     transition: background-color var(--ease), color var(--ease);
   }
   .btn:hover:not(:disabled) {
-    background-color: rgb(var(--line));
+    background-color: rgb(var(--hover));
   }
   .btn:disabled {
     opacity: 0.4;
@@ -113,7 +120,7 @@ body {
     transition: background-color var(--ease), color var(--ease);
   }
   .btn-ghost:hover:not(:disabled) {
-    background-color: rgb(var(--raised));
+    background-color: rgb(var(--hover));
     color: rgb(var(--fg));
   }
   .btn-ghost[aria-pressed="true"],
@@ -125,7 +132,7 @@ body {
   }
   .segmented > button[aria-pressed="true"],
   .segmented > a[aria-current="page"] {
-    background-color: rgb(var(--raised));
+    background-color: rgb(var(--hover));
     color: rgb(var(--fg));
   }
 }

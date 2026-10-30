@@ -6,6 +6,7 @@ import "reactflow/dist/style.css";
 import CommitNode, { CommitNodeData, RefChip, RowData, refItems, refsWidth } from "./CommitNode";
 import CommitEdge, { EdgeData } from "./CommitEdge";
 import { BranchModel, RefInfo } from "./branchColors";
+import { Tip } from "./Tooltip";
 import { LANE_PAD, LANE_W, ROW_H, laneOf, laneX } from "./lanes";
 
 export type { CommitNodeData };
@@ -309,6 +310,23 @@ export default function CommitGraph({
   );
 }
 
+const CTL = "h-7 w-8 rounded-md flex items-center justify-center text-muted hover:text-fg hover:bg-hover";
+
+// Module-level on purpose: a component defined inside GraphControls would remount (and lose
+// keyboard focus) every time the zoom readout changes.
+function Btn({ label, onClick, children, pressed, className = "" }: { label: string; onClick: () => void; children: React.ReactNode; pressed?: boolean; className?: string }) {
+  return (
+    <Tip label={label} side="left">
+      <button className={`${CTL} ${pressed ? "text-fg" : ""} ${className}`} onClick={onClick} aria-label={label} aria-pressed={pressed}>
+        {children}
+      </button>
+    </Tip>
+  );
+}
+function Sep() {
+  return <span className="h-px w-5 bg-line my-0.5" aria-hidden />;
+}
+
 /** Zoom, fit and minimap controls in one group. */
 function GraphControls({
   labelX,
@@ -325,7 +343,7 @@ function GraphControls({
   const zoomPct = useStore((s) => Math.round(s.transform[2] * 100));
   const size = useStore((s) => ({ w: s.width, h: s.height }), (a, b) => a.w === b.w && a.h === b.h);
 
-  const btn = "h-7 w-8 rounded-md flex items-center justify-center text-muted hover:text-fg hover:bg-raised";
+  const icon = { width: 14, height: 14, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
 
   function fitWidth() {
     const vp = rf.getViewport();
@@ -336,66 +354,45 @@ function GraphControls({
   }
 
   return (
-    <div role="toolbar" aria-label="Graph view" aria-orientation="vertical" className="panel rounded-lg p-0.5 flex flex-col items-center gap-0.5">
-      <button className={btn} onClick={() => rf.zoomIn({ duration: 120 })} aria-label="Zoom in" title="Zoom in">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
+    <div role="toolbar" aria-label="Graph view" aria-orientation="vertical" className="panel rounded-lg p-0.5 flex flex-col items-center gap-0.5 border border-line/70">
+      <Btn label="Zoom in" onClick={() => rf.zoomIn({ duration: 120 })}>
+        <svg {...icon}>
           <path d="M3.5 8h9M8 3.5v9" />
         </svg>
-      </button>
-      <button
-        className={`${btn} font-mono text-caption tabular-nums`}
-        onClick={() => rf.zoomTo(1, { duration: 120 })}
-        aria-label={`Zoom ${zoomPct}%. Reset to 100%`}
-        title="Reset to 100%"
-      >
+      </Btn>
+      <Btn label={`Zoom ${zoomPct}%. Click to reset to 100%`} onClick={() => rf.zoomTo(1, { duration: 120 })} className="font-mono text-caption tabular-nums">
         {zoomPct}%
-      </button>
-      <button className={btn} onClick={() => rf.zoomOut({ duration: 120 })} aria-label="Zoom out" title="Zoom out">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
+      </Btn>
+      <Btn label="Zoom out" onClick={() => rf.zoomOut({ duration: 120 })}>
+        <svg {...icon}>
           <path d="M3.5 8h9" />
         </svg>
-      </button>
-      <span className="h-px w-5 bg-line my-0.5" aria-hidden />
-      <button className={btn} onClick={fitWidth} aria-label="Fit graph to width" title="Fit to width">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      </Btn>
+      <Sep />
+      <Btn label="Fit graph to width" onClick={fitWidth}>
+        <svg {...icon}>
           <path d="M2.5 3v10M13.5 3v10M5.5 8h5M7.2 6.3 5.5 8l1.7 1.7M8.8 6.3 10.5 8 8.8 9.7" />
         </svg>
-      </button>
-      <button
-        className={btn}
-        onClick={() => rf.fitView({ padding: 0.04, duration: 200, minZoom: 0.05 })}
-        aria-label="Fit whole history on screen"
-        title="Fit whole history"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      </Btn>
+      <Btn label="Fit whole history on screen" onClick={() => rf.fitView({ padding: 0.04, duration: 200, minZoom: 0.05 })}>
+        <svg {...icon}>
           <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />
         </svg>
-      </button>
-      <button
-        className={btn}
-        onClick={() => rf.setViewport({ x: EDGE_PAD, y: EDGE_PAD, zoom: rf.getZoom() }, { duration: 150 })}
-        aria-label="Scroll to newest commit"
-        title="Newest commit"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      </Btn>
+      <Btn label="Scroll to newest commit" onClick={() => rf.setViewport({ x: EDGE_PAD, y: EDGE_PAD, zoom: rf.getZoom() }, { duration: 150 })}>
+        <svg {...icon}>
           <path d="M3 3h10M8 13V6M5 8.5 8 5.5l3 3" />
         </svg>
-      </button>
+      </Btn>
       {canMap && (
         <>
-          <span className="h-px w-5 bg-line my-0.5" aria-hidden />
-          <button
-            className={`${btn} ${showMap ? "text-fg" : ""}`}
-            onClick={onToggleMap}
-            aria-pressed={showMap}
-            aria-label="Minimap"
-            title={showMap ? "Hide minimap" : "Show minimap"}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden>
+          <Sep />
+          <Btn label={showMap ? "Hide minimap" : "Show minimap"} onClick={onToggleMap} pressed={showMap}>
+            <svg {...icon} strokeLinecap="butt">
               <rect x="2.5" y="3" width="11" height="10" rx="1.5" />
               <rect x="7.5" y="7" width="4.5" height="4" rx="0.5" fill="currentColor" stroke="none" />
             </svg>
-          </button>
+          </Btn>
         </>
       )}
     </div>

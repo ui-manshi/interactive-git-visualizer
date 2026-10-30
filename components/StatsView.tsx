@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { RawGraphNode } from "./CommitGraph";
 
 interface Props {
   nodes: RawGraphNode[];
   totalCommits: number;
   repoPath: string;
+  /** Number of branches (local and remote-tracking) in the repository. */
+  branchCount?: number;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -22,7 +24,7 @@ function dayKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function StatsView({ nodes, totalCommits, repoPath }: Props) {
+export default function StatsView({ nodes, totalCommits, repoPath, branchCount }: Props) {
   const stats = useMemo(() => {
     const authors = new Map<string, { commits: number; first: number; last: number }>();
     const days = new Map<string, number>();
@@ -76,45 +78,48 @@ export default function StatsView({ nodes, totalCommits, repoPath }: Props) {
   // Charts about time need commits on more than one day to say anything.
   const enoughDays = stats.days.size >= 2;
   const iso = (ts: number) => localIso(new Date(ts * 1000));
+  const scope = loadedAll ? "entire history" : `loaded history (${nodes.length.toLocaleString()} of ${totalCommits.toLocaleString()})`;
 
   return (
     <div className="absolute inset-0 overflow-y-auto">
-      <div className="max-w-[1080px] mx-auto px-6 py-6 space-y-10">
-        <header className="space-y-1">
+      <div className="max-w-[1120px] mx-auto px-5 py-5 space-y-4">
+        <header className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h2 className="text-title font-semibold m-0">Repository statistics</h2>
           <p className="font-mono text-caption text-muted m-0 tabular-nums">
             {iso(stats.first)} → {iso(stats.last)} · local time
           </p>
-          {!loadedAll && (
-            <p className="text-body text-warn m-0">
-              Covers the newest {nodes.length.toLocaleString()} of {totalCommits.toLocaleString()} commits. Use &ldquo;Load more&rdquo; in the sidebar to include older history.
-            </p>
-          )}
         </header>
+        {!loadedAll && (
+          <p className="text-body text-warn m-0 rounded-lg bg-warn/10 px-3 py-2" role="note">
+            These figures cover the newest {nodes.length.toLocaleString()} of {totalCommits.toLocaleString()} commits. Use &ldquo;Load more&rdquo; in the sidebar to include older history.
+          </p>
+        )}
 
-        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6 m-0">
-          <Metric label="commits analysed" value={nodes.length.toLocaleString()} />
-          <Metric label="contributors" value={stats.contributors.length.toLocaleString()} />
-          <Metric label="active days" value={stats.days.size.toLocaleString()} />
-          <Metric label="top contributor" value={topAuthor.name} sub={`${topAuthor.commits.toLocaleString()} commits`} text />
+        <dl className="grid grid-cols-2 lg:grid-cols-4 gap-3 m-0">
+          <Kpi label="Commits analysed" value={nodes.length.toLocaleString()} sub={loadedAll ? "entire history" : `of ${totalCommits.toLocaleString()} total`} />
+          <Kpi label="Contributors" value={stats.contributors.length.toLocaleString()} sub={`in the ${loadedAll ? "history" : "loaded commits"}`} />
+          <Kpi label="Active days" value={stats.days.size.toLocaleString()} sub="days with at least one commit" />
+          {branchCount !== undefined && <Kpi label="Branches" value={branchCount.toLocaleString()} sub="local and remote-tracking" />}
         </dl>
 
-        <div className="grid lg:grid-cols-2 gap-x-12 gap-y-10 items-start">
-          <Section title="contributors" note={stats.contributors.length > 10 ? `top 10 of ${stats.contributors.length}` : undefined}>
-            <ul className="m-0 p-0 list-none space-y-3">
+        <div className="grid lg:grid-cols-2 gap-4 items-stretch">
+          <Card
+            title="Contributors"
+            note={`${stats.contributors.length > 10 ? `top 10 of ${stats.contributors.length} · ` : ""}top: ${topAuthor.name} (${topAuthor.commits.toLocaleString()})`}
+          >
+            <ul className="m-0 p-0 list-none space-y-3.5">
               {stats.contributors.slice(0, 10).map((c) => {
                 const pct = (c.commits / nodes.length) * 100;
                 return (
                   <li key={c.name}>
                     <div className="flex justify-between gap-3 text-body">
-                      <span className="text-fg truncate" title={c.name}>
-                        {c.name}
-                      </span>
+                      <span className="text-fg min-w-0 [overflow-wrap:anywhere]">{c.name}</span>
                       <span className="font-mono text-caption text-muted flex-shrink-0 tabular-nums leading-5">
                         {c.commits.toLocaleString()} · {pct.toFixed(pct < 10 ? 1 : 0)}%
                       </span>
                     </div>
-                    <div className="h-[3px] bg-raised mt-1.5">
-                      <div className="h-full bg-muted" style={{ width: `${Math.max(pct, 1.5)}%` }} />
+                    <div className="h-1.5 rounded-full bg-raised mt-1.5 overflow-hidden" role="img" aria-label={`${pct.toFixed(1)} percent of analysed commits`}>
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(pct, 1.5)}%` }} />
                     </div>
                     <p className="font-mono text-caption text-faint m-0 mt-1 tabular-nums">
                       {iso(c.first)} → {iso(c.last)}
@@ -123,25 +128,25 @@ export default function StatsView({ nodes, totalCommits, repoPath }: Props) {
                 );
               })}
             </ul>
-          </Section>
+          </Card>
 
-          <Section title="most changed files" note={hot ? `newest ${hot.scanned.toLocaleString()} non-merge commits` : undefined}>
+          <Card title="Most changed files" note={hot ? `newest ${hot.scanned.toLocaleString()} non-merge commits` : undefined}>
             {hotError && <p className="text-del text-body m-0">{hotError}</p>}
-            {!hot && !hotError && <p className="text-muted text-body m-0">Scanning recent commits…</p>}
+            {!hot && !hotError && <SkeletonRows />}
             {hot && hot.files.length === 0 && <p className="text-muted text-body m-0">No file changes were found in the commits scanned.</p>}
             {hot && hot.files.length > 0 && (
               <>
-                <ul className="m-0 p-0 list-none space-y-3">
+                <ul className="m-0 p-0 list-none space-y-3.5">
                   {hot.files.map((f) => (
                     <li key={f.path}>
-                      <div className="flex justify-between gap-3 text-body">
+                      <div className="flex justify-between gap-3">
                         <span className="font-mono text-caption text-fg [overflow-wrap:anywhere] leading-5" title={f.path}>
                           {f.path}
                         </span>
                         <span className="font-mono text-caption text-muted flex-shrink-0 tabular-nums leading-5">{f.commits}</span>
                       </div>
-                      <div className="h-[3px] bg-raised mt-1.5">
-                        <div className="h-full bg-muted" style={{ width: `${(f.commits / hot.files[0].commits) * 100}%` }} />
+                      <div className="h-1.5 rounded-full bg-raised mt-1.5 overflow-hidden">
+                        <div className="h-full rounded-full bg-violet" style={{ width: `${(f.commits / hot.files[0].commits) * 100}%` }} />
                       </div>
                     </li>
                   ))}
@@ -149,38 +154,39 @@ export default function StatsView({ nodes, totalCommits, repoPath }: Props) {
                 <p className="text-caption text-faint mt-3 mb-0">Each bar counts the commits that touched that file.</p>
               </>
             )}
-          </Section>
+          </Card>
         </div>
 
-        <Section title="activity calendar">
+        <Card title="Activity calendar" note={scope}>
           {enoughDays ? (
-            <Heatmap days={stats.days} end={stats.last} />
+            <Heatmap days={stats.days} first={stats.first} end={stats.last} />
           ) : (
             <p className="text-muted text-body m-0">
               All {nodes.length.toLocaleString()} loaded commits fall on a single day, so there is no activity pattern to show yet.
             </p>
           )}
-        </Section>
+        </Card>
 
-        <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-x-12 gap-y-10 items-start">
-          <Section title="by weekday">
+        <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 items-stretch">
+          <Card title="Commits by weekday" note={scope}>
             {enoughDays ? (
-              <Bars values={stats.weekday} labels={WEEKDAYS} names={WEEKDAYS} />
+              <Bars values={stats.weekday} labels={WEEKDAYS} names={WEEKDAYS} total={nodes.length} />
             ) : (
               <p className="text-muted text-body m-0">Needs commits on at least two different days.</p>
             )}
-          </Section>
-          <Section title="by hour of day" note="local time">
+          </Card>
+          <Card title="Commits by hour of day" note="local time">
             {enoughDays ? (
               <Bars
                 values={stats.hour}
                 labels={stats.hour.map((_, i) => (i % 3 === 0 ? String(i) : ""))}
-                names={stats.hour.map((_, i) => `${String(i).padStart(2, "0")}:00`)}
+                names={stats.hour.map((_, i) => `${String(i).padStart(2, "0")}:00–${String(i).padStart(2, "0")}:59`)}
+                total={nodes.length}
               />
             ) : (
               <p className="text-muted text-body m-0">Needs commits on at least two different days.</p>
             )}
-          </Section>
+          </Card>
         </div>
 
         <StoragePanel repoPath={repoPath} />
@@ -189,41 +195,76 @@ export default function StatsView({ nodes, totalCommits, repoPath }: Props) {
   );
 }
 
-function Metric({ label, value, sub, text }: { label: string; value: string; sub?: string; text?: boolean }) {
+function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="min-w-0">
-      <dt className="font-mono text-caption text-muted">{label}</dt>
+    <div className="card px-4 py-3 min-w-0">
+      <dt className="text-caption text-muted">{label}</dt>
       <dd className="m-0 mt-1 min-w-0">
-        <span className={`block truncate text-fg ${text ? "text-title font-medium leading-[34px]" : "text-display tabular-nums"}`} title={value}>
+        <span className="block text-display tabular-nums text-fg" title={value}>
           {value}
         </span>
-        {sub && <span className="block font-mono text-caption text-faint tabular-nums">{sub}</span>}
+        {sub && <span className="block text-caption text-faint">{sub}</span>}
       </dd>
     </div>
   );
 }
 
-/** An open section: a mono label and spacing, no box. */
-function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+/** A dashboard card: title and an optional scope note on one line, content below. */
+function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
-    <section className="min-w-0">
-      <h3 className="flex items-baseline gap-3 m-0 mb-4 font-mono text-caption font-normal text-muted">
-        <span>{title}</span>
-        {note && <span className="text-faint">{note}</span>}
-      </h3>
-      {children}
+    <section className="card p-4 min-w-0 flex flex-col">
+      <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
+        <h3 className="text-body font-semibold m-0">{title}</h3>
+        {note && <span className="text-caption text-faint">{note}</span>}
+      </div>
+      <div className="flex-1">{children}</div>
     </section>
   );
 }
 
-/** Vertical bars with a y-axis (0, half, max), light gridlines and one label per bar group. Neutral ink; the tallest bars are brightest. */
-function Bars({ values, labels, names }: { values: number[]; labels: string[]; names: string[] }) {
-  const max = Math.max(...values, 1);
-  const H = 112;
-  const ticks = [max, Math.round(max / 2), 0].filter((t, i, a) => a.indexOf(t) === i);
+function SkeletonRows() {
   return (
-    <div className="flex gap-2" role="img" aria-label={`Bar chart. Highest value ${max} commits.`}>
-      <div className="relative flex-none w-7 font-mono text-caption text-faint tabular-nums" style={{ height: H }} aria-hidden>
+    <div className="space-y-4" aria-label="Loading" aria-busy="true">
+      {[80, 62, 48, 36].map((w) => (
+        <div key={w} className="space-y-2">
+          <div className="h-3 rounded bg-raised animate-pulse motion-reduce:animate-none" style={{ width: `${w}%` }} />
+          <div className="h-1.5 rounded-full bg-raised animate-pulse motion-reduce:animate-none" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A floating readout that follows a hovered chart element. */
+function ChartTip({ x, y, children }: { x: number; y: number; children: React.ReactNode }) {
+  return (
+    <div
+      role="tooltip"
+      className="absolute z-10 pointer-events-none -translate-x-1/2 -translate-y-full -mt-2 whitespace-nowrap popover rounded-md px-2.5 py-1.5 text-caption"
+      style={{ left: x, top: y }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Vertical bars with a y-axis (0, half, max) and light gridlines. Hover or keyboard focus shows the exact value. */
+function Bars({ values, labels, names, total }: { values: number[]; labels: string[]; names: string[]; total: number }) {
+  const max = Math.max(...values, 1);
+  const H = 120;
+  const [tip, setTip] = useState<{ i: number; x: number; y: number } | null>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+  const ticks = [max, Math.round(max / 2), 0].filter((t, i, a) => a.indexOf(t) === i);
+
+  function show(i: number, el: HTMLElement) {
+    const w = wrap.current?.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (w) setTip({ i, x: r.left - w.left + r.width / 2, y: r.top - w.top });
+  }
+
+  return (
+    <div ref={wrap} className="relative flex gap-2" role="group" aria-label={`Bar chart. Highest value ${max} commits.`}>
+      <div className="relative flex-none w-8 font-mono text-caption text-faint tabular-nums" style={{ height: H }} aria-hidden>
         {ticks.map((t) => (
           <span key={t} className="absolute right-0 -translate-y-1/2 leading-none" style={{ top: H - (t / max) * H }}>
             {t}
@@ -231,14 +272,22 @@ function Bars({ values, labels, names }: { values: number[]; labels: string[]; n
         ))}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="relative flex items-end gap-[3px]" style={{ height: H }}>
+        <div className="relative flex items-end gap-[3px]" style={{ height: H }} onMouseLeave={() => setTip(null)}>
           {ticks.map((t) => (
-            <div key={t} className="absolute inset-x-0 border-t border-raised" style={{ top: H - (t / max) * H }} aria-hidden />
+            <div key={t} className="absolute inset-x-0 border-t border-line/40" style={{ top: H - (t / max) * H }} aria-hidden />
           ))}
           {values.map((v, i) => (
-            <div key={i} className="relative flex-1 min-w-0 h-full flex items-end" title={`${names[i]}: ${v} commit${v === 1 ? "" : "s"}`}>
-              <div className={`w-full rounded-t-[2px] ${v === max ? "bg-fg" : "bg-muted/70"}`} style={{ height: `${(v / max) * 100}%`, minHeight: v > 0 ? 2 : 0 }} />
-            </div>
+            <button
+              key={i}
+              type="button"
+              className="relative flex-1 min-w-0 h-full flex items-end focus-visible:outline-offset-0"
+              aria-label={`${names[i]}: ${v} commit${v === 1 ? "" : "s"}`}
+              onMouseEnter={(e) => show(i, e.currentTarget.firstElementChild as HTMLElement)}
+              onFocus={(e) => show(i, e.currentTarget.firstElementChild as HTMLElement)}
+              onBlur={() => setTip(null)}
+            >
+              <span className={`block w-full rounded-t-[3px] transition-colors ${v === max ? "bg-accent" : "bg-accent/55 hover:bg-accent/80"}`} style={{ height: `${(v / max) * 100}%`, minHeight: v > 0 ? 2 : 0 }} />
+            </button>
           ))}
         </div>
         <div className="flex gap-[3px] mt-1.5">
@@ -249,98 +298,138 @@ function Bars({ values, labels, names }: { values: number[]; labels: string[]; n
           ))}
         </div>
       </div>
+      {tip && (
+        <ChartTip x={tip.x} y={tip.y}>
+          <span className="text-fg font-medium">{names[tip.i]}</span>
+          <span className="text-muted">
+            {" "}
+            · {values[tip.i].toLocaleString()} commit{values[tip.i] === 1 ? "" : "s"} ({((values[tip.i] / total) * 100).toFixed(1)}%)
+          </span>
+        </ChartTip>
+      )}
     </div>
   );
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-/** GitHub-style calendar: 53 weeks ending at the latest commit's week, with month and weekday labels. */
-function Heatmap({ days, end }: { days: Map<string, number>; end: number }) {
+/**
+ * GitHub-style calendar: 53 weeks ending at the latest commit's week. Three kinds of square are
+ * kept apart: a day with commits (filled), a quiet day inside the loaded history (empty), and a
+ * day outside the loaded history (dashed outline), where "no commits" would be a guess.
+ */
+function Heatmap({ days, first, end }: { days: Map<string, number>; first: number; end: number }) {
   const WEEKS = 53;
-  const CELL = 11;
+  const CELL = 12;
   const GAP = 3;
-  const LEFT = 28;
-  const TOP = 16;
-  const [hover, setHover] = useState<string | null>(null);
+  const LEFT = 30;
+  const TOP = 18;
+  const [tip, setTip] = useState<{ x: number; y: number; text: string; sub: string } | null>(null);
+  const wrap = useRef<HTMLDivElement>(null);
+
   const endDate = new Date(end * 1000);
   endDate.setHours(12, 0, 0, 0);
+  const firstDate = new Date(first * 1000);
+  firstDate.setHours(0, 0, 0, 0);
   const start = new Date(endDate.getTime() - (WEEKS * 7 - 1) * DAY_MS);
   start.setTime(start.getTime() - start.getDay() * DAY_MS); // back to a Sunday
 
-  const max = Math.max(...Array.from(days.values()), 1);
+  let max = 1;
+  let busiest: { key: string; n: number } | null = null;
+  days.forEach((n, key) => {
+    if (n > max) max = n;
+    if (!busiest || n > busiest.n) busiest = { key, n };
+  });
   const level = (n: number) => (n === 0 ? 0 : Math.max(1, Math.ceil((n / max) * 4)));
-  const opacity = [0, 0.22, 0.42, 0.68, 0.95];
+  const opacity = [0, 0.28, 0.5, 0.75, 1];
 
   const cells: React.ReactNode[] = [];
   const monthStarts: { w: number; month: number }[] = [];
   let lastMonth = -1;
   for (let w = 0; w < WEEKS + 1; w++) {
-    const first = new Date(start.getTime() + w * 7 * DAY_MS);
-    if (first.getMonth() !== lastMonth && first.getTime() <= endDate.getTime()) {
-      lastMonth = first.getMonth();
+    const wk = new Date(start.getTime() + w * 7 * DAY_MS);
+    if (wk.getMonth() !== lastMonth && wk.getTime() <= endDate.getTime()) {
+      lastMonth = wk.getMonth();
       monthStarts.push({ w, month: lastMonth });
     }
     for (let d = 0; d < 7; d++) {
       const date = new Date(start.getTime() + (w * 7 + d) * DAY_MS);
       if (date.getTime() > endDate.getTime() + DAY_MS) continue;
       const n = days.get(dayKey(date)) ?? 0;
+      const outside = date.getTime() < firstDate.getTime() || date.getTime() > endDate.getTime() + DAY_MS / 2;
       const lv = level(n);
-      const label = `${n} commit${n === 1 ? "" : "s"} on ${date.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })}`;
+      const when = date.toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" });
+      const text = outside ? "Outside the loaded history" : n === 0 ? "No commits" : `${n} commit${n === 1 ? "" : "s"}`;
+      const x = LEFT + w * (CELL + GAP);
+      const y = TOP + d * (CELL + GAP);
       cells.push(
         <rect
           key={`${w}-${d}`}
-          x={LEFT + w * (CELL + GAP)}
-          y={TOP + d * (CELL + GAP)}
-          width={CELL}
-          height={CELL}
+          data-date={outside ? undefined : dayKey(date)}
+          data-count={outside ? undefined : n}
+          x={outside ? x + 0.5 : x}
+          y={outside ? y + 0.5 : y}
+          width={outside ? CELL - 1 : CELL}
+          height={outside ? CELL - 1 : CELL}
           rx={2}
-          fill={lv === 0 ? "rgb(var(--raised))" : "rgb(var(--fg))"}
+          fill={outside ? "none" : lv === 0 ? "rgb(var(--raised))" : "rgb(var(--accent))"}
           fillOpacity={lv === 0 ? 1 : opacity[lv]}
-          onMouseEnter={() => setHover(label)}
-          onMouseLeave={() => setHover(null)}
-        >
-          <title>{label}</title>
-        </rect>
+          stroke={outside ? "rgb(var(--line))" : "none"}
+          strokeDasharray={outside ? "2 2" : undefined}
+          onMouseEnter={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            const c = wrap.current?.getBoundingClientRect();
+            if (c) setTip({ x: r.left - c.left + r.width / 2, y: r.top - c.top, text, sub: when });
+          }}
+          onMouseLeave={() => setTip(null)}
+        />
       );
     }
   }
 
-  // A month label needs about three columns of room; drop one that would crowd the next.
+  // A label needs about three columns of room; drop one that would crowd the next.
   const monthLabels = monthStarts
     .filter((m, i) => i === monthStarts.length - 1 || monthStarts[i + 1].w - m.w >= 3)
     .map((m) => (
-      <text key={`m${m.w}`} x={LEFT + m.w * (CELL + GAP)} y={10} fontSize={10} fill="rgb(var(--faint))">
+      <text key={`m${m.w}`} x={LEFT + m.w * (CELL + GAP)} y={11} fontSize={11} fill="rgb(var(--faint))">
         {MONTHS[m.month]}
       </text>
     ));
 
   const width = LEFT + (WEEKS + 1) * (CELL + GAP);
+  const b = busiest as { key: string; n: number } | null;
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <svg width={width} height={TOP + 7 * (CELL + GAP)} role="img" aria-label="Commit activity calendar">
+    <div ref={wrap} className="relative">
+      <div className="overflow-x-auto pb-1">
+        <svg
+          width={width}
+          height={TOP + 7 * (CELL + GAP)}
+          role="img"
+          aria-label={`Commit activity calendar, ${days.size} active days${b ? `; busiest day ${b.key} with ${b.n} commits` : ""}`}
+        >
           {monthLabels}
           {[1, 3, 5].map((d) => (
-            <text key={d} x={0} y={TOP + d * (CELL + GAP) + CELL - 1} fontSize={10} fill="rgb(var(--faint))">
+            <text key={d} x={0} y={TOP + d * (CELL + GAP) + CELL - 1} fontSize={11} fill="rgb(var(--faint))">
               {WEEKDAYS[d]}
             </text>
           ))}
           {cells}
         </svg>
       </div>
-      <div className="flex items-center justify-between gap-3 mt-2 text-caption text-muted flex-wrap">
-        <span aria-live="polite" className="min-h-4 font-mono">
-          {hover ?? `The 53 weeks up to ${localIso(endDate)}, one square per day.`}
+      {tip && (
+        <ChartTip x={tip.x} y={tip.y}>
+          <span className="text-fg font-medium">{tip.text}</span>
+          <span className="text-muted"> · {tip.sub}</span>
+        </ChartTip>
+      )}
+      <div className="flex items-center justify-between gap-4 mt-2 text-caption text-muted flex-wrap">
+        <span className="inline-flex items-center gap-1.5" aria-hidden>
+          <span className="w-3 h-3 rounded-[2px] border border-dashed border-line inline-block" /> outside loaded history
         </span>
-        <span className="inline-flex items-center gap-1" aria-hidden>
+        <span className="inline-flex items-center gap-1.5" aria-hidden>
           Less
           {[0, 1, 2, 3, 4].map((l) => (
-            <span
-              key={l}
-              className="w-[11px] h-[11px] rounded-[2px] inline-block"
-              style={{ background: l === 0 ? "rgb(var(--raised))" : `rgb(var(--fg) / ${opacity[l]})` }}
-            />
+            <span key={l} className="w-3 h-3 rounded-[2px] inline-block" style={{ background: l === 0 ? "rgb(var(--raised))" : `rgb(var(--accent) / ${opacity[l]})` }} />
           ))}
           More
         </span>
@@ -400,7 +489,7 @@ function StoragePanel({ repoPath }: { repoPath: string }) {
   }, [repoPath]);
 
   return (
-    <Section title="object storage">
+    <Card title="Object storage" note="how Git keeps the history on disk">
       {error && <p className="text-del text-body m-0">{error}</p>}
       {!data && !error && <p className="text-muted text-body m-0">Reading packfiles…</p>}
       {data && (
@@ -409,9 +498,13 @@ function StoragePanel({ repoPath }: { repoPath: string }) {
             Git keeps objects either as individual zlib-compressed <em>loose</em> files, or bundled into <em>packfiles</em> where similar
             objects are stored as small <em>deltas</em> against each other. Clones and larger fetches arrive packed; small fetches and your own commits start out loose until <code>git gc</code> packs them.
           </p>
-          <dl className="grid grid-cols-3 gap-x-8 m-0 max-w-xl">
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3 m-0">
             <MiniStat label="Packfiles" value={String(data.packs.length)} />
-            <MiniStat label="Packed objects" value={data.packs.reduce((n, p) => n + p.objects, 0).toLocaleString()} />
+            <MiniStat
+              label="Packed objects"
+              value={data.packs.reduce((n, p) => n + p.objects, 0).toLocaleString()}
+              sub={formatBytes(data.packs.reduce((n, p) => n + p.bytes, 0))}
+            />
             <MiniStat
               label="Loose objects"
               value={`${data.loose.count.toLocaleString()}${data.loose.truncated ? "+" : ""}`}
@@ -464,14 +557,14 @@ function StoragePanel({ repoPath }: { repoPath: string }) {
           )}
         </div>
       )}
-    </Section>
+    </Card>
   );
 }
 
 function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div>
-      <dt className="font-mono text-caption text-muted">{label}</dt>
+      <dt className="text-caption text-muted">{label}</dt>
       <dd className="m-0 mt-0.5">
         <span className="text-title text-fg tabular-nums">{value}</span>
         {sub && <span className="block font-mono text-caption text-faint">{sub}</span>}

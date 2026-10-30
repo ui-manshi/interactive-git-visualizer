@@ -15,6 +15,7 @@ const config: Config = {
         ground: token("ground"),
         surface: token("surface"),
         raised: token("raised"),
+        hover: token("hover"),
         line: token("line"),
         fg: token("fg"),
         muted: token("muted"),

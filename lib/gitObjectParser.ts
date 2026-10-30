@@ -506,3 +506,29 @@ export function listTagRefs(repoPath: string): TagRef[] {
   }
   return out;
 }
+
+/**
+ * The "origin" remote URL from .git/config (or the first remote when there is no origin).
+ * Credentials embedded in the URL are removed. Returns null when no remote is configured.
+ */
+export function readRemoteUrl(repoPath: string): string | null {
+  try {
+    const cfg = fs.readFileSync(path.join(repoPath, ".git", "config"), "utf8");
+    const urls: { name: string; url: string }[] = [];
+    let section: string | null = null;
+    for (const line of cfg.split(/\r?\n/)) {
+      const sec = line.match(/^\s*\[remote "([^"]+)"\]\s*$/);
+      if (sec) {
+        section = sec[1];
+        continue;
+      }
+      if (/^\s*\[/.test(line)) section = null;
+      const kv = section ? line.match(/^\s*url\s*=\s*(.+?)\s*$/) : null;
+      if (kv && section) urls.push({ name: section, url: kv[1] });
+    }
+    const pick = urls.find((u) => u.name === "origin") ?? urls[0];
+    return pick ? pick.url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^@/]+@/i, "$1") : null;
+  } catch {
+    return null;
+  }
+}

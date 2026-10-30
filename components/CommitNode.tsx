@@ -185,7 +185,9 @@ export default function CommitNode({ data, selected }: NodeProps<RowData>) {
                 {data.author}
               </span>
             )}
-            <span className="flex-none w-[5.5rem] font-mono text-caption text-faint text-right tabular-nums">{isoDate(data.timestamp)}</span>
+            {data.labelW >= 520 && (
+              <span className="flex-none w-[5.5rem] font-mono text-caption text-faint text-right tabular-nums">{isoDate(data.timestamp)}</span>
+            )}
           </>
         )}
       </div>

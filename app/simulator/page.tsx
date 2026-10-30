@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import DagView, { DagEdge, DagNode, DagTag } from "@/components/DagView";
 import { laneColor } from "@/components/lanes";
-import { Brand, Toolbar, ToolbarDivider } from "@/components/shell";
+import { Brand, NavTab, Toolbar, ToolbarDivider } from "@/components/shell";
+import { Tip } from "@/components/Tooltip";
 import { HELP, SCENARIOS, SimState, ancestors, headId, reachable, runCommand } from "@/components/simulator/model";
 
 interface LogLine {
@@ -31,6 +32,9 @@ export default function SimulatorPage() {
   // Recovery guidance opens by itself when a command orphans commits, and stays out of the way otherwise.
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [keyOpen, setKeyOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false); // show the whole explanation instead of two lines
+  // What the last command changed, derived from the real before/after state.
+  const [change, setChange] = useState<{ chips: ChangeChip[]; highlight: Set<string> } | null>(null);
   const [input, setInput] = useState("");
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx] = useState<number | null>(null);
@@ -59,22 +63,24 @@ export default function SimulatorPage() {
       if (changed) setUndoStack((u) => [...u, state]);
       setState(result.state);
     }
+    setChange(result.ok && result.state !== state ? describeChange(state, result.state) : null);
     const recovery = result.ok ? recoveryFor(state, result.state) : undefined;
     setNote(result.ok && result.note ? { text: result.note, recovery } : null);
     setRecoveryOpen(!!recovery);
+    setNoteOpen(false);
     setCmdHistory((h) => [...h, text]);
     setHistIdx(null);
     setInput("");
   }
 
   function undo() {
-    setUndoStack((u) => {
-      if (u.length === 0) return u;
-      setState(u[u.length - 1]);
-      setLog((l) => [...l, { kind: "info", text: "Undid the last command." }]);
-      setNote(null);
-      return u.slice(0, -1);
-    });
+    if (undoStack.length === 0) return;
+    setState(undoStack[undoStack.length - 1]);
+    setUndoStack((u) => u.slice(0, -1));
+    setLog((l) => [...l, { kind: "info", text: "Undid the last command." }]);
+    setNote(null);
+    setChange(null);
+    setRecoveryOpen(false);
   }
 
   function load(id: string) {
@@ -83,6 +89,7 @@ export default function SimulatorPage() {
     setState(sc.build());
     setUndoStack([]);
     setNote(null);
+    setChange(null);
     setRecoveryOpen(false);
     setConfirmReset(false);
     setLog([{ kind: "info", text: sc.hint }]);
@@ -149,17 +156,22 @@ export default function SimulatorPage() {
     <main className="h-dvh lg:h-dvh flex flex-col bg-ground text-fg overflow-hidden">
       <Toolbar label="Simulator">
         <Brand compact />
-        <ToolbarDivider />
-        <h1 className="text-body font-medium m-0 flex-none">Simulator</h1>
+        <span className="hidden sm:block">
+          <ToolbarDivider />
+        </span>
+        <nav aria-label="Sections" className="flex items-center h-12 flex-none">
+          <NavTab label="Simulator" href="/simulator" active />
+        </nav>
         <span className="flex-1 min-w-0" />
         <label className="sr-only" htmlFor="scenario">
-          Starting scenario
+          Scenario
         </label>
         <select
           id="scenario"
           value={scenarioId}
           onChange={(e) => load(e.target.value)}
-          className="field rounded-md px-2 h-8 text-body min-w-0 max-w-[11rem]"
+          className="field rounded-md px-2 h-8 text-body min-w-0 max-w-[14rem] lg:max-w-[22rem]"
+          title={scenario.name}
         >
           {SCENARIOS.map((s) => (
             <option key={s.id} value={s.id}>
@@ -167,19 +179,17 @@ export default function SimulatorPage() {
             </option>
           ))}
         </select>
-        <button onClick={undo} disabled={undoStack.length === 0} className="btn text-body px-3 h-8 rounded-md flex-none">
-          Undo
-        </button>
+        <Tip label={undoStack.length ? `Undo the last command (${undoStack.length} available)` : "Nothing to undo yet"}>
+          <button onClick={undo} disabled={undoStack.length === 0} className="btn text-body px-3 h-8 rounded-md flex-none">
+            Undo
+          </button>
+        </Tip>
         {confirmReset ? (
           <div role="group" aria-label="Confirm reset" className="flex items-center gap-1 flex-none">
             <span className="hidden md:inline text-body text-muted mr-1">
               Discard {loggedCommands} change{loggedCommands === 1 ? "" : "s"}?
             </span>
-            <button
-              onClick={() => load(scenarioId)}
-              className="text-body px-3 h-8 rounded-md border border-del/60 text-del hover:bg-del/10"
-              autoFocus
-            >
+            <button onClick={() => load(scenarioId)} className="text-body px-3 h-8 rounded-md ring-1 ring-inset ring-del/70 text-del hover:bg-del/10" autoFocus>
               Reset
             </button>
             <button onClick={() => setConfirmReset(false)} className="btn text-body px-3 h-8 rounded-md">
@@ -187,17 +197,22 @@ export default function SimulatorPage() {
             </button>
           </div>
         ) : (
-          <button
-            onClick={() => (undoStack.length > 0 ? setConfirmReset(true) : load(scenarioId))}
-            className="btn text-body px-3 h-8 rounded-md flex-none"
-            title="Return to the starting scenario"
-          >
-            Reset
-          </button>
+          <Tip label="Return to this scenario's starting point">
+            <button
+              onClick={() => (undoStack.length > 0 ? setConfirmReset(true) : load(scenarioId))}
+              className="btn text-body px-3 h-8 rounded-md flex-none"
+            >
+              Reset
+            </button>
+          </Tip>
         )}
-        <Link href="/" className="btn-ghost hidden md:inline-flex items-center h-8 px-2.5 rounded-md text-body flex-none">
-          Open a repository
-        </Link>
+        <span className="hidden md:inline-flex">
+          <Tip label="Visualise a real repository" align="end">
+            <Link href="/" className="btn-ghost inline-flex items-center h-8 px-2.5 rounded-md text-body flex-none">
+              Open a repository
+            </Link>
+          </Tip>
+        </span>
       </Toolbar>
 
       {/* One workbench: the graph and the terminal share a height; the status line and the prompt
@@ -207,7 +222,7 @@ export default function SimulatorPage() {
           {nodes.length === 0 ? (
             <p className="text-muted text-body m-0">The repository is empty. Run git commit to create the first commit.</p>
           ) : (
-            <DagView nodes={nodes} edges={edges} tags={tags} minLanes={2} fit ariaLabel="Commit graph of the simulated repository" />
+            <DagView nodes={nodes} edges={edges} tags={tags} minLanes={2} fit highlight={change?.highlight} ariaLabel="Commit graph of the simulated repository" />
           )}
         </section>
 
@@ -242,12 +257,23 @@ export default function SimulatorPage() {
               <div className="text-faint mt-2 whitespace-pre overflow-x-auto">{HELP.join("\n")}</div>
             )}
           </div>
-          <div className="flex-none px-4 py-3 flex flex-wrap gap-1.5" aria-label="Suggested commands">
-            {suggestions.map((c) => (
-              <button key={c} onClick={() => run(c)} className="btn font-mono text-caption px-2 h-7 rounded-md hover:text-accent">
-                {c}
-              </button>
-            ))}
+          <div className="flex-none px-4 pt-2 pb-3 space-y-2 max-h-[40%] overflow-y-auto" aria-label="Suggested commands">
+            {CATEGORIES.map((cat) => {
+              const cmds = suggestions.filter((c) => categoryOf(c) === cat);
+              if (cmds.length === 0) return null;
+              return (
+                <div key={cat} className="flex items-start gap-2">
+                  <span className="w-[4.6rem] flex-none pt-1 text-caption text-faint leading-4">{cat}</span>
+                  <div className="flex flex-wrap gap-1.5 min-w-0">
+                    {cmds.map((c) => (
+                      <button key={c} onClick={() => run(c)} className="btn font-mono text-caption px-2 h-7 rounded-md hover:text-accent">
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -257,10 +283,15 @@ export default function SimulatorPage() {
             <span className="font-mono text-caption text-faint leading-5 flex-none select-none" aria-hidden>
               #
             </span>
-            <p className="text-body text-fg m-0 min-w-0 flex-1 line-clamp-2" title={note?.text ?? scenario.hint}>
+            <p className={`text-body text-fg m-0 min-w-0 flex-1 ${noteOpen ? "" : "line-clamp-2"}`}>
               {note?.text ?? scenario.hint}
             </p>
             <div className="flex-none flex items-center gap-1 -mr-2">
+              {(note?.text ?? scenario.hint).length > 150 && (
+                <button onClick={() => setNoteOpen((v) => !v)} aria-expanded={noteOpen} className="btn-ghost h-6 px-2 rounded-md text-caption">
+                  {noteOpen ? "less" : "more"}
+                </button>
+              )}
               {note?.recovery && (
                 <button
                   onClick={() => setRecoveryOpen((v) => !v)}
@@ -275,6 +306,22 @@ export default function SimulatorPage() {
               </button>
             </div>
           </div>
+          {change && change.chips.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5 pl-4" aria-label="What changed">
+              {change.chips.slice(0, 6).map((c, i) => (
+                <span
+                  key={i}
+                  className={`font-mono text-caption px-1.5 py-0.5 rounded ${
+                    c.kind === "new" ? "bg-add/10 text-add" : c.kind === "rewrite" ? "bg-warn/10 text-warn" : c.kind === "remove" ? "bg-del/10 text-del" : "bg-raised text-muted"
+                  }`}
+                  title={c.title}
+                >
+                  {c.text}
+                </span>
+              ))}
+              {change.chips.length > 6 && <span className="font-mono text-caption text-faint py-0.5">+{change.chips.length - 6} more</span>}
+            </div>
+          )}
           {recoveryOpen && note?.recovery && (
             <p className="text-body text-muted m-0 mt-1 pl-4 max-w-[80ch] max-h-28 overflow-y-auto">{note.recovery}</p>
           )}
@@ -380,4 +427,76 @@ function recoveryFor(before: SimState, after: SimState): string | undefined {
   const tip = newestOrphan(after, liveAfter);
   const where = tip ? ` Run git branch rescue ${tip.slice(0, 7)} to point a new branch at the newest one.` : "";
   return `${newlyLost.length} commit${newlyLost.length === 1 ? " is" : "s are"} now orphaned. They are still stored, drawn faded with dashed rings.${where} Undo also brings them back. git gc deletes them for good. Real Git can also find them with git reflog; the simulator does not implement the reflog.`;
+}
+
+// ---- command categories (only commands the simulator really runs) ----
+const CATEGORIES = ["Commits", "Branching", "Merging", "Rebasing", "Undo & recovery", "Inspect"] as const;
+type Category = (typeof CATEGORIES)[number];
+
+function categoryOf(cmd: string): Category {
+  const verb = cmd.split(/\s+/)[1] ?? "";
+  if (verb === "commit") return "Commits";
+  if (verb === "merge") return "Merging";
+  if (verb === "rebase" || verb === "cherry-pick") return "Rebasing";
+  if (verb === "reset" || verb === "revert" || verb === "gc") return "Undo & recovery";
+  if (verb === "branch" && /\brescue\b/.test(cmd)) return "Undo & recovery";
+  if (verb === "log" || verb === "status") return "Inspect";
+  return "Branching"; // branch, checkout, switch, tag
+}
+
+interface ChangeChip {
+  kind: "new" | "rewrite" | "move" | "remove";
+  text: string;
+  title?: string;
+}
+
+/**
+ * Describes what a command did by comparing the real before and after states: commits created,
+ * commits re-created (with their old and new hashes), and branch/tag/HEAD movement.
+ */
+function describeChange(before: SimState, after: SimState): { chips: ChangeChip[]; highlight: Set<string> } {
+  const chips: ChangeChip[] = [];
+  const highlight = new Set<string>();
+  const label = (st: SimState, id: string) => st.commits[id]?.label ?? id.slice(0, 7);
+  const liveAfter = reachable(after);
+
+  for (const id of after.order.filter((x) => !before.commits[x])) {
+    const c = after.commits[id];
+    highlight.add(id);
+    const orig = c.copiedFrom;
+    if (orig && after.commits[orig]) {
+      const rewritten = !liveAfter.has(orig);
+      chips.push({
+        kind: "rewrite",
+        text: `${label(after, orig)} → ${c.label}  ${orig.slice(0, 7)} → ${id.slice(0, 7)}`,
+        title: `${rewritten ? "Rewritten" : "Copied"}: the commit was re-created with a new hash (${orig.slice(0, 7)} became ${id.slice(0, 7)})`,
+      });
+    } else {
+      chips.push({ kind: "new", text: `+ ${c.label} ${id.slice(0, 7)}`, title: `New commit ${id.slice(0, 7)}` });
+    }
+  }
+  for (const [name, id] of Object.entries(after.branches)) {
+    const was = before.branches[name];
+    if (was === id) continue;
+    highlight.add(id);
+    chips.push({ kind: "move", text: was ? `${name}: ${label(before, was)} → ${label(after, id)}` : `branch ${name} → ${label(after, id)}` });
+  }
+  for (const name of Object.keys(before.branches)) {
+    if (!(name in after.branches)) chips.push({ kind: "remove", text: `deleted branch ${name}` });
+  }
+  for (const [name, id] of Object.entries(after.tags)) {
+    if (before.tags[name] !== id) {
+      highlight.add(id);
+      chips.push({ kind: "move", text: `tag ${name} → ${label(after, id)}` });
+    }
+  }
+  const h0 = JSON.stringify(before.head);
+  const h1 = JSON.stringify(after.head);
+  if (h0 !== h1) {
+    const where = after.head.kind === "branch" ? after.head.name : `detached at ${label(after, after.head.id)}`;
+    chips.push({ kind: "move", text: `HEAD → ${where}` });
+    if (after.head.kind === "detached") highlight.add(after.head.id);
+    else if (after.branches[after.head.name]) highlight.add(after.branches[after.head.name]);
+  }
+  return { chips, highlight };
 }

@@ -1,28 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DiffSummary as Summary, FileChange, fetchDiffSummary } from "@/lib/diffClient";
 import { Lang, TOKEN_CLASS, highlightLine, langFor } from "@/lib/highlight";
 
 // Mirrors NO_EOL in lib/commitDiff.ts (a marker on a last line with no trailing newline).
 const NO_EOL = "\u0001";
-
-interface FileChange {
-  path: string;
-  status: "added" | "deleted" | "modified";
-  binary: boolean;
-  submodule: boolean;
-  modeOnly: boolean;
-  additions: number | null;
-  deletions: number | null;
-}
-
-interface Summary {
-  files: FileChange[];
-  totalFiles: number;
-  additions: number;
-  deletions: number;
-  statsLimited: boolean;
-}
 
 interface DiffOp {
   type: "equal" | "insert" | "delete";
@@ -64,9 +47,12 @@ interface Props {
   /** Base commit hash, or null to diff against the empty tree (root commit). */
   from: string | null;
   to: string;
+  /** Open this file (and scroll to it) when it is part of the change set. */
+  focusPath?: string | null;
 }
 
-export default function DiffViewer({ repoPath, from, to, mode = "unified", onModeChange }: Props) {
+export default function DiffViewer({ repoPath, from, to, mode = "unified", onModeChange, focusPath = null }: Props) {
+  const sectionRefs = useRef(new Map<string, HTMLElement>());
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openPath, setOpenPath] = useState<string | null>(null);
@@ -81,21 +67,30 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
     setError(null);
     setOpenPath(null);
     setDiff(null);
-    fetch(base)
-      .then((r) => r.json())
+    fetchDiffSummary(repoPath, from, to)
       .then((data) => {
         if (cancelled) return;
-        if (data.error) throw new Error(data.error);
         setSummary(data);
-        // Auto-open the first file when the change set is small and reviewable.
-        const first = (data as Summary).files.find((f) => !f.binary && !f.submodule && !f.modeOnly);
-        if (first && data.files.length <= 3) setOpenPath(first.path);
+        // A file chosen elsewhere (the Files tab) wins; otherwise auto-open the first file
+        // when the change set is small and reviewable.
+        const wanted = focusPath && data.files.find((f) => f.path === focusPath);
+        const first = data.files.find((f) => !f.binary && !f.submodule && !f.modeOnly);
+        if (wanted) setOpenPath(wanted.path);
+        else if (first && data.files.length <= 3) setOpenPath(first.path);
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       cancelled = true;
     };
-  }, [base]);
+  }, [repoPath, from, to]);
+
+  // Follow a file picked outside the viewer, then bring it into view once it has rendered.
+  useEffect(() => {
+    if (!focusPath || !summary || !summary.files.some((f) => f.path === focusPath)) return;
+    setOpenPath(focusPath);
+    const t = setTimeout(() => sectionRefs.current.get(focusPath)?.scrollIntoView({ block: "start", behavior: "smooth" }), 80);
+    return () => clearTimeout(t);
+  }, [focusPath, summary]);
 
   useEffect(() => {
     if (!openPath) return;
@@ -158,7 +153,7 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
           const name = slash >= 0 ? f.path.slice(slash + 1) : f.path;
 
           return (
-            <section key={f.path} className="border border-line rounded-md">
+            <section key={f.path} ref={(el) => { if (el) sectionRefs.current.set(f.path, el); else sectionRefs.current.delete(f.path); }} className="border border-line rounded-md scroll-mt-2">
               <button
                 onClick={() => expandable && setOpenPath(isOpen ? null : f.path)}
                 aria-expanded={expandable ? isOpen : undefined}
@@ -237,9 +232,25 @@ const GUTTER = "select-none text-right text-faint tabular-nums align-top px-2 mi
 const HUNK_ROW = "bg-raised";
 const HUNK_CELL = "px-3 py-0.5 text-faint select-none";
 
+/** Lines rendered before a large diff asks to be expanded, so a huge change cannot freeze the page. */
+const LINE_LIMIT = 1500;
+
 function HunkTable({ diff, mode, lang }: { diff: FileDiff; mode: DiffMode; lang: Lang | null }) {
+  const [showAll, setShowAll] = useState(false);
   if (diff.hunks.length === 0) {
     return <p className="p-3 text-body text-muted m-0">No line changes.</p>;
+  }
+  const total = diff.hunks.reduce((n, h) => n + h.ops.length, 0);
+  let hunks = diff.hunks;
+  if (!showAll && total > LINE_LIMIT) {
+    let used = 0;
+    hunks = [];
+    for (const h of diff.hunks) {
+      if (used >= LINE_LIMIT) break;
+      const room = LINE_LIMIT - used;
+      hunks.push(h.ops.length > room ? { ...h, ops: h.ops.slice(0, room) } : h);
+      used += Math.min(h.ops.length, room);
+    }
   }
 
   return (
@@ -259,7 +270,7 @@ function HunkTable({ diff, mode, lang }: { diff: FileDiff; mode: DiffMode; lang:
             <col />
           </colgroup>
           <tbody>
-            {diff.hunks.map((h, hi) => (
+            {hunks.map((h, hi) => (
               <SplitHunkRows key={hi} hunk={h} lang={lang} />
             ))}
           </tbody>
@@ -267,11 +278,21 @@ function HunkTable({ diff, mode, lang }: { diff: FileDiff; mode: DiffMode; lang:
       ) : (
         <table className="text-body leading-5 font-mono w-full border-collapse">
           <tbody>
-            {diff.hunks.map((h, hi) => (
+            {hunks.map((h, hi) => (
               <HunkRows key={hi} hunk={h} lang={lang} />
             ))}
           </tbody>
         </table>
+      )}
+      {!showAll && total > LINE_LIMIT && (
+        <div className="flex items-center justify-between gap-3 px-3 py-2 bg-raised text-body text-muted">
+          <span>
+            Showing the first {LINE_LIMIT.toLocaleString()} of {total.toLocaleString()} lines.
+          </span>
+          <button onClick={() => setShowAll(true)} className="btn px-2.5 h-7 rounded-md text-body">
+            Show all
+          </button>
+        </div>
       )}
     </div>
   );

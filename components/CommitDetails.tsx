@@ -1,11 +1,15 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import { Tip } from "./Tooltip";
+import { useToast } from "./Toast";
 
 /** Compact icon-only copy action. Quiet until hovered, so metadata does not read as a row of buttons. */
 export function CopyButton({ text, label }: { text: string; label: string }) {
   const [copied, setCopied] = useState(false);
+  const toast = useToast();
   return (
+    <Tip label={copied ? "Copied" : label}>
     <button
       type="button"
       onClick={() => {
@@ -13,13 +17,13 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
           ?.writeText(text)
           .then(() => {
             setCopied(true);
+            toast("Copied to clipboard");
             setTimeout(() => setCopied(false), 1200);
           })
-          .catch(() => {});
+          .catch(() => toast("Could not copy. Your browser blocked clipboard access.", "error"));
       }}
       className="flex-none w-6 h-6 rounded inline-flex items-center justify-center text-faint hover:text-fg hover:bg-raised"
       aria-label={copied ? "Copied" : label}
-      title={copied ? "Copied" : label}
     >
       {copied ? (
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="rgb(var(--accent))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -32,6 +36,7 @@ export function CopyButton({ text, label }: { text: string; label: string }) {
         </svg>
       )}
     </button>
+    </Tip>
   );
 }
 

@@ -63,6 +63,7 @@ export default function DagView({
   ariaLabel,
   fit = false,
   maxScale = 1.6,
+  highlight,
 }: {
   nodes: DagNode[];
   edges: DagEdge[];
@@ -73,6 +74,8 @@ export default function DagView({
   fit?: boolean;
   /** In fit mode, how much larger than natural size the diagram may grow. */
   maxScale?: number;
+  /** Commits to ring: what the last command created or moved. */
+  highlight?: Set<string>;
 }) {
   const byId = new Map(nodes.map((n) => [n.id, n]));
 
@@ -82,11 +85,14 @@ export default function DagView({
   for (const t of tags) stacks.set(t.nodeId, (stacks.get(t.nodeId) ?? 0) + 1);
   const tallestStack = Math.max(0, ...Array.from(stacks.values()));
   const padTop = R + 14 + (tallestStack > 0 ? 12 + tallestStack * TAG_H : 6);
-  const pos = (n: DagNode) => ({ x: PAD_X + n.col * COL_W, y: padTop + n.lane * LANE_H });
+  // Side margin: wide enough that the widest reference label centred on the first or last column is not cut off.
+  const widestTag = Math.max(0, ...tags.map((t) => t.text.length * 7.1 + 22));
+  const padX = Math.max(PAD_X, Math.ceil(widestTag / 2) + 8);
+  const pos = (n: DagNode) => ({ x: padX + n.col * COL_W, y: padTop + n.lane * LANE_H });
 
   const maxCol = Math.max(0, ...nodes.map((n) => n.col));
   const maxLane = Math.max(minLanes - 1, ...nodes.map((n) => n.lane), 0);
-  const width = PAD_X * 2 + maxCol * COL_W;
+  const width = padX * 2 + maxCol * COL_W;
   const height = padTop + maxLane * LANE_H + R + 26;
 
   // Tags stack upward from their commit.
@@ -173,6 +179,9 @@ export default function DagView({
             <g key={n.id} style={{ transform: `translate(${x}px, ${y}px)`, transition: "transform 180ms ease" }}>
               <g className="station-in" opacity={n.ghost ? 0.4 : 1}>
                 <title>{n.title ?? n.label}</title>
+                {highlight?.has(n.id) && (
+                  <circle r={R + 7} fill="none" stroke="rgb(var(--accent))" strokeWidth={2} opacity={0.9} className="fade-in" aria-hidden />
+                )}
                 <circle
                   r={R}
                   fill="rgb(var(--ground))"

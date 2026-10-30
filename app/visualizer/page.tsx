@@ -13,6 +13,10 @@ import ShortcutsHelp from "@/components/ShortcutsHelp";
 import { FilterState, computeMatches } from "@/components/graphFilter";
 import { ancestorSet, computeBranchModel } from "@/components/branchColors";
 import { Brand, IconButton, MoreMenu, Toolbar, ToolbarDivider, menuItem } from "@/components/shell";
+import { Tip } from "@/components/Tooltip";
+import { useToast } from "@/components/Toast";
+import { useDiffSummary } from "@/lib/diffClient";
+import { EMPTY_FILTER } from "@/components/graphFilter";
 import { CopyButton, HashValue, MetaGrid, MetaRow } from "@/components/CommitDetails";
 import { FlagIcon } from "@/components/CommitNode";
 import { isReleaseTag } from "@/components/tags";
@@ -109,7 +113,9 @@ export default function VisualizerPage() {
   );
 }
 
-const SIDEBAR_W = 264;
+const SIDEBAR_DEFAULT_W = 264;
+const SIDEBAR_MIN_W = 220;
+const SIDEBAR_MAX_W = 420;
 const INSPECTOR_DEFAULT_W = 440;
 const INSPECTOR_MIN_W = 320;
 /** The graph always keeps at least this much room beside the sidebar and inspector. */
@@ -122,6 +128,11 @@ function VisualizerContent() {
   const [refs, setRefs] = useState<Ref[]>([]);
   const [tags, setTags] = useState<TagInfo[]>([]);
   const [head, setHead] = useState<HeadInfo | null>(null);
+  const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
+  const [refsLoaded, setRefsLoaded] = useState(false);
+  const [focusFile, setFocusFile] = useState<string | null>(null);
+  const [sidebarW, setSidebarW] = useState(SIDEBAR_DEFAULT_W);
+  const toast = useToast();
   const [graph, setGraph] = useState<GraphResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,6 +191,8 @@ function VisualizerContent() {
         setRefs(d.refs);
         setTags(d.tags ?? []);
         setHead(d.head ?? null);
+        setRemoteUrl(d.remoteUrl ?? null);
+        setRefsLoaded(true);
       })
       .catch((err) => !cancelled && setError(err instanceof Error ? err.message : String(err)));
     return () => {
@@ -243,6 +256,7 @@ function VisualizerContent() {
 
   function handleSelectCommit(hash: string) {
     setDrawerOpen(false);
+    setFocusFile(null);
     if (!compareMode) {
       setSelectedHash(hash);
       setCompareHash(null);
@@ -306,6 +320,13 @@ function VisualizerContent() {
   }
 
   const nodeCount = graph?.nodes.length ?? 0;
+
+  // One real change summary feeds the inspector header, the Files tab markers and the Changes tab.
+  const { summary: changeSummary, error: changeSummaryError } = useDiffSummary(repoPath, diffFrom, diffTo);
+  const changesMap = useMemo(
+    () => (changeSummary ? new Map(changeSummary.files.map((f) => [f.path, f.status] as const)) : null),
+    [changeSummary]
+  );
   // Branch comparison shows in the side panel whenever no single commit is selected.
   const cmpRefs = useMemo(() => {
     if (!branchCmp) return null;
@@ -348,14 +369,32 @@ function VisualizerContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph]);
 
+  // Remember panel widths between visits (best effort: storage can be unavailable).
+  useEffect(() => {
+    try {
+      const sw = Number(localStorage.getItem("gv.sidebarW"));
+      const iw = Number(localStorage.getItem("gv.inspectorW"));
+      if (sw >= SIDEBAR_MIN_W && sw <= SIDEBAR_MAX_W) setSidebarW(sw);
+      if (iw >= INSPECTOR_MIN_W && iw <= 1200 && initial.diff !== "split") setInspectorW(iw);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("gv.sidebarW", String(sidebarW));
+      localStorage.setItem("gv.inspectorW", String(inspectorW));
+    } catch {}
+  }, [sidebarW, inspectorW]);
+
   function copyLink() {
     navigator.clipboard
       ?.writeText(window.location.href)
       .then(() => {
         setLinkCopied(true);
+        toast("Link to this view copied");
         setTimeout(() => setLinkCopied(false), 1500);
       })
-      .catch(() => {});
+      .catch(() => toast("Could not copy the link. Your browser blocked clipboard access.", "error"));
   }
 
   function changeDiffMode(m: DiffMode) {
@@ -584,7 +623,7 @@ function VisualizerContent() {
 
   function clampInspectorW(w: number): number {
     const total = rowRef.current?.clientWidth ?? 1400;
-    const used = sidebarDesktop && sidebarDocks() ? SIDEBAR_W : 0;
+    const used = sidebarDesktop && sidebarDocks() ? sidebarW : 0;
     return Math.round(Math.min(Math.max(w, INSPECTOR_MIN_W), Math.max(INSPECTOR_MIN_W, total - used - GRAPH_MIN_W)));
   }
 
@@ -597,6 +636,22 @@ function VisualizerContent() {
     e.preventDefault();
     const right = rowRef.current?.getBoundingClientRect().right ?? window.innerWidth;
     const move = (ev: PointerEvent) => setInspectorW(clampInspectorW(right - ev.clientX));
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
+  function startSidebarResize(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const left = rowRef.current?.getBoundingClientRect().left ?? 0;
+    const move = (ev: PointerEvent) => setSidebarW(Math.round(Math.min(SIDEBAR_MAX_W, Math.max(SIDEBAR_MIN_W, ev.clientX - left))));
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
@@ -641,88 +696,92 @@ function VisualizerContent() {
 
   return (
     <main className="h-dvh flex flex-col bg-ground text-fg overflow-hidden">
-      <Toolbar>
-        <IconButton
-          label="Toggle sidebar"
-          onClick={toggleSidebar}
-          pressed={sidebarDesktop || drawerOpen}
-        >
+      <Toolbar compact>
+        {/* Left: panel toggle, product, repository and checked-out branch */}
+        <IconButton label="Toggle sidebar" onClick={toggleSidebar} pressed={sidebarDesktop || drawerOpen} tipAlign="start" className="!w-7 !h-7">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden>
             <rect x="2" y="3" width="12" height="10" rx="1.5" />
             <path d="M6 3v10" />
           </svg>
         </IconButton>
         <Brand compact />
-        <ToolbarDivider />
-        <div className="flex items-center gap-2 min-w-0 flex-1" aria-live="polite">
-          <span className="font-mono text-body truncate min-w-0" title={repoPath}>
+        <span className="hidden sm:block">
+          <ToolbarDivider />
+        </span>
+        <div className="flex items-center gap-2 min-w-0" aria-live="polite">
+          <span className="font-mono text-body font-medium text-fg truncate min-w-0" title={repoPath}>
             {loading ? "Reading repository…" : error ? "Could not open this repository" : repoName}
           </span>
           {ready && head && (
-            <span
-              className="flex-none hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-raised text-caption text-muted"
-              title={head.branch ? `Checked out: ${head.branch}` : `HEAD is detached at ${head.hash}`}
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
-                <circle cx="4" cy="3.5" r="1.6" />
-                <circle cx="4" cy="12.5" r="1.6" />
-                <circle cx="12" cy="6" r="1.6" />
-                <path d="M4 5.1v5.8M12 7.6c0 2.4-3 2.2-6.4 3.6" />
-              </svg>
-              <span className="font-mono max-w-[14rem] truncate">{head.branch ?? `detached ${head.hash?.slice(0, 7)}`}</span>
-            </span>
+            <Tip label={head.branch ? `Checked out: ${head.branch}` : `HEAD is detached at ${head.hash}`} className="min-w-0 flex-none">
+              <span className="hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-raised text-caption text-muted">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden className="flex-none">
+                  <circle cx="4" cy="3.5" r="1.6" />
+                  <circle cx="4" cy="12.5" r="1.6" />
+                  <circle cx="12" cy="6" r="1.6" />
+                  <path d="M4 5.1v5.8M12 7.6c0 2.4-3 2.2-6.4 3.6" />
+                </svg>
+                <span className="font-mono max-w-[12rem] truncate">{head.branch ?? `detached ${head.hash?.slice(0, 7)}`}</span>
+              </span>
+            </Tip>
           )}
         </div>
 
+        <span className="flex-1" />
+
+        {/* Right: Graph | Stats, Compare commits, Simulator, New repository, Copy link, ? */}
         {ready && (
           <>
             <div role="group" aria-label="View" className="segmented flex text-body rounded-md overflow-hidden flex-none">
-              {(["graph", "stats"] as View[]).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  aria-pressed={view === v}
-                  title={v === "graph" ? "Commit graph (g)" : "Contributor stats (g)"}
-                  className={`h-[30px] px-3 ${view === v ? "" : "text-muted hover:text-fg"}`}
-                >
-                  {v === "graph" ? "Graph" : "Stats"}
+              <Tip label="Commit graph" shortcut="g" align="start">
+                <button onClick={() => setView("graph")} aria-pressed={view === "graph"} className={`h-7 px-3 rounded-md ${view === "graph" ? "bg-raised text-fg" : "text-muted hover:text-fg"}`}>
+                  Graph
                 </button>
-              ))}
+              </Tip>
+              <Tip label="Repository statistics" shortcut="g">
+                <button onClick={() => setView("stats")} aria-pressed={view === "stats"} className={`h-7 px-3 rounded-md ${view === "stats" ? "bg-raised text-fg" : "text-muted hover:text-fg"}`}>
+                  Stats
+                </button>
+              </Tip>
             </div>
-            <button
-              onClick={toggleCompareMode}
-              aria-pressed={compareMode}
-              title="Compare two commits (m)"
-              className={`${compareMode ? "border border-accent text-accent bg-accent/10" : "btn"} h-8 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M4 2.5v8M4 10.5a2 2 0 1 0 0 3 2 2 0 0 0 0-3ZM12 13.5v-8M12 5.5a2 2 0 1 0 0-3 2 2 0 0 0 0 3Z" />
-              </svg>
-              <span className="hidden md:inline">{compareMode ? "Exit compare" : "Compare commits"}</span>
-            </button>
+            <Tip label="Compare two commits" shortcut="m">
+              <button
+                onClick={toggleCompareMode}
+                aria-pressed={compareMode}
+                aria-label={compareMode ? "Exit compare mode" : "Compare commits"}
+                className={`${compareMode ? "ring-1 ring-inset ring-accent text-accent bg-accent/10" : "btn"} h-7 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M4 2.5v8M4 10.5a2 2 0 1 0 0 3 2 2 0 0 0 0-3ZM12 13.5v-8M12 5.5a2 2 0 1 0 0-3 2 2 0 0 0 0 3Z" />
+                </svg>
+                <span className="hidden lg:inline">{compareMode ? "Exit compare" : "Compare commits"}</span>
+              </button>
+            </Tip>
           </>
         )}
-
-        {/* Secondary actions: quiet and inline when there is room, one overflow menu otherwise. */}
         <div className="hidden xl:flex items-center gap-0.5 flex-none">
-          <Link href="/simulator" className="btn-ghost h-8 px-2.5 rounded-md text-body inline-flex items-center">
+          <Link href="/simulator" className="btn-ghost h-7 px-2.5 rounded-md text-body inline-flex items-center">
             Simulator
           </Link>
-          <Link href="/" className="btn-ghost h-8 px-2.5 rounded-md text-body inline-flex items-center">
+          <Link href="/" className="btn-ghost h-7 px-2.5 rounded-md text-body inline-flex items-center">
             New repository
           </Link>
           {ready && (
             <>
-              <button onClick={copyLink} className="btn-ghost h-8 px-2.5 rounded-md text-body" title="Copy a link to this exact view">
-                {linkCopied ? "Link copied" : "Copy link"}
-              </button>
-              <IconButton label="Keyboard shortcuts (?)" onClick={() => setHelpOpen(true)}>
-                <span className="text-body font-semibold">?</span>
+              <Tip label="Copy a link to this exact view">
+                <button onClick={copyLink} className="btn-ghost h-7 px-2.5 rounded-md text-body">
+                  {linkCopied ? "Link copied" : "Copy link"}
+                </button>
+              </Tip>
+              <IconButton label="Keyboard shortcuts" shortcut="?" onClick={() => setHelpOpen(true)} tipAlign="end" className="!w-7 !h-7">
+                <span className="text-body font-semibold" aria-hidden>
+                  ?
+                </span>
               </IconButton>
             </>
           )}
         </div>
-        <div className="xl:hidden">
+        <div className="xl:hidden flex-none">
           <MoreMenu>{secondaryActions}</MoreMenu>
         </div>
       </Toolbar>
@@ -730,55 +789,78 @@ function VisualizerContent() {
       <div ref={rowRef} className="flex-1 min-h-0 flex relative">
         {drawerOpen && (
           <div
-            className="xl:hidden fixed inset-x-0 top-12 bottom-0 z-30 bg-ground/70"
+            className="xl:hidden fixed inset-x-0 top-10 bottom-0 z-30 bg-ground/70"
             aria-hidden
             onClick={() => setDrawerOpen(false)}
           />
         )}
         {panelOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-12 bottom-0 z-30 bg-ground/70" aria-hidden onClick={closePanel} />
+          <div className="lg:hidden fixed inset-x-0 top-10 bottom-0 z-30 bg-ground/70" aria-hidden onClick={closePanel} />
         )}
 
         {/* ---------------- Sidebar ---------------- */}
         <nav
           id="repo-sidebar"
           aria-label="Repository"
-          className={`flex-none flex-col bg-surface min-h-0 w-[264px] ${
+          className={`relative flex-none flex-col bg-surface border-r border-line/70 min-h-0 w-[min(20rem,calc(100vw-3rem))] xl:w-[var(--sw)] ${
             sidebarVisibleDesktop ? "xl:flex" : "xl:hidden"
           } ${
             drawerOpen
-              ? "max-xl:flex max-xl:fixed max-xl:left-0 max-xl:top-12 max-xl:bottom-0 max-xl:z-40 max-xl:w-[min(20rem,calc(100vw-3rem))]"
+              ? "max-xl:flex max-xl:fixed max-xl:left-0 max-xl:top-10 max-xl:bottom-0 max-xl:z-40"
               : "max-xl:hidden"
           }`}
+          style={{ ["--sw" as string]: `${sidebarW}px` }}
         >
           <div className="flex-none px-4 pt-4 pb-3">
             <p className="text-title font-semibold m-0 break-words" title={repoPath}>
               {repoName}
             </p>
-            {repoPath && (
-              <p className="font-mono text-caption text-faint m-0 mt-1 truncate" title={repoPath}>
+            {(remoteUrl || repoPath) && (
+              <p className="font-mono text-caption text-faint m-0 mt-1 truncate" title={remoteUrl ?? repoPath}>
+                {remoteUrl ?? repoPath}
+              </p>
+            )}
+            {remoteUrl && repoPath && remoteUrl !== repoPath && (
+              <p className="font-mono text-caption text-faint/80 m-0 truncate" title={repoPath}>
                 {repoPath}
               </p>
             )}
-            {!loading && !error && (
-              <p className="font-mono text-caption text-muted m-0 mt-2 tabular-nums">
-                {nodeCount.toLocaleString()} commits · {refs.length} branch{refs.length === 1 ? "" : "es"}
-              </p>
+
+            {/* Loaded versus total history. The bar and the numbers are the same two values. */}
+            {!loading && !error && graph && (
+              <div className="mt-3">
+                <p className="font-mono text-caption text-muted m-0 tabular-nums flex justify-between gap-2">
+                  <span>
+                    {nodeCount.toLocaleString()} of {graph.totalCommits.toLocaleString()} commits loaded
+                  </span>
+                  <span>
+                    {refs.length} branch{refs.length === 1 ? "" : "es"}
+                  </span>
+                </p>
+                {graph.truncated && (
+                  <div
+                    role="progressbar"
+                    aria-label="Share of history loaded"
+                    aria-valuemin={0}
+                    aria-valuemax={graph.totalCommits}
+                    aria-valuenow={nodeCount}
+                    className="h-1 rounded-full bg-raised mt-1.5 overflow-hidden"
+                  >
+                    <div className="h-full bg-accent/70 rounded-full transition-[width]" style={{ width: `${Math.min(100, (nodeCount / graph.totalCommits) * 100)}%` }} />
+                  </div>
+                )}
+              </div>
             )}
             {graph?.truncated && (
-              <div className="mt-2 text-caption space-y-1.5">
-                <p className="text-warn m-0">
-                  Showing the newest {nodeCount.toLocaleString()} of {graph.totalCommits.toLocaleString()} commits.
-                </p>
+              <div className="mt-2.5 text-caption">
                 {maxCommits < LOAD_STEPS[LOAD_STEPS.length - 1] ? (
                   <button
                     onClick={() => setMaxCommits(LOAD_STEPS.find((x) => x > maxCommits) ?? maxCommits)}
                     disabled={loadingMore}
-                    className="btn text-body px-2.5 h-7 rounded-md"
+                    className="btn w-full text-body px-2.5 h-8 rounded-md inline-flex items-center justify-center gap-2"
                   >
-                    {loadingMore
-                      ? "Loading…"
-                      : `Load more (up to ${(LOAD_STEPS.find((x) => x > maxCommits) ?? maxCommits).toLocaleString()})`}
+                    {loadingMore && <span className="w-3 h-3 rounded-full border-2 border-line border-t-accent animate-spin motion-reduce:animate-none" aria-hidden />}
+                    {loadingMore ? "Loading history…" : `Load more (up to ${(LOAD_STEPS.find((x) => x > maxCommits) ?? maxCommits).toLocaleString()})`}
                   </button>
                 ) : (
                   <p className="text-muted m-0">That is the most this viewer loads at once.</p>
@@ -789,6 +871,16 @@ function VisualizerContent() {
 
           {/* The only scrolling region: branches, remotes and tags. */}
           <div className="flex-1 min-h-0 overflow-y-auto py-1">
+            {!refsLoaded && !error && (
+              <div className="px-4 pt-2 space-y-2.5" aria-hidden>
+                {[60, 78, 52, 70, 46].map((w, i) => (
+                  <div key={i} className="h-3 rounded bg-raised animate-pulse motion-reduce:animate-none" style={{ width: `${w}%` }} />
+                ))}
+              </div>
+            )}
+            {refsLoaded && localRefs.length === 0 && remoteRefs.length === 0 && (
+              <p className="px-4 py-3 text-body text-muted m-0">This repository has no branches yet.</p>
+            )}
             <RefSection title="branches" count={localRefs.length}>
               {localRefs.map((ref) => (
                 <RefRow
@@ -908,6 +1000,28 @@ function VisualizerContent() {
               <p className="m-0 font-sans">Newest first. Colour follows the branch.</p>
             </div>
           </div>
+          {/* Drag to resize; arrow keys resize too. */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            aria-valuemin={SIDEBAR_MIN_W}
+            aria-valuemax={SIDEBAR_MAX_W}
+            aria-valuenow={sidebarW}
+            tabIndex={0}
+            onPointerDown={startSidebarResize}
+            onDoubleClick={() => setSidebarW(SIDEBAR_DEFAULT_W)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                setSidebarW((w) => Math.max(SIDEBAR_MIN_W, w - 16));
+              } else if (e.key === "ArrowRight") {
+                e.preventDefault();
+                setSidebarW((w) => Math.min(SIDEBAR_MAX_W, w + 16));
+              }
+            }}
+            className="hidden xl:block absolute -right-[3px] top-0 bottom-0 w-[5px] z-10 cursor-col-resize hover:bg-accent/50 focus-visible:bg-accent focus-visible:outline-none"
+          />
         </nav>
 
         {/* ---------------- Workspace ---------------- */}
@@ -952,7 +1066,7 @@ function VisualizerContent() {
 
           {ready && view === "stats" && (
             <div className="flex-1 min-h-0 relative">
-              <StatsView nodes={graph!.nodes} totalCommits={graph!.totalCommits} repoPath={repoPath} />
+              <StatsView nodes={graph!.nodes} totalCommits={graph!.totalCommits} repoPath={repoPath} branchCount={refs.length} />
             </div>
           )}
 
@@ -1009,6 +1123,17 @@ function VisualizerContent() {
                   matchedHashes={dimSet}
                   hiddenHashes={hiddenHashes}
                 />
+                {matched && matched.size === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
+                    <div className="popover rounded-lg p-5 text-center max-w-xs pointer-events-auto" role="status">
+                      <p className="text-body font-medium m-0">No commits match</p>
+                      <p className="text-body text-muted mt-1 mb-3">Nothing in the loaded history fits the current search and filters.</p>
+                      <button onClick={() => setFilter(EMPTY_FILTER)} className="btn px-3 h-8 rounded-md text-body">
+                        Clear search and filters
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <TimeTravel
                 total={chrono.length}
@@ -1035,11 +1160,11 @@ function VisualizerContent() {
         {panelOpen && (
           <aside
             aria-label="Commit inspector"
-            className="flex-none relative flex flex-col min-h-0 bg-surface max-lg:fixed max-lg:right-0 max-lg:top-12 max-lg:bottom-0 max-lg:z-40 max-lg:!w-[min(34rem,100vw)] lg:max-w-[calc(100%-380px)] xl:max-w-[calc(100%-var(--sb)-380px)]"
+            className="flex-none relative flex flex-col min-h-0 bg-surface border-l border-line/70 max-lg:fixed max-lg:right-0 max-lg:top-10 max-lg:bottom-0 max-lg:z-40 max-lg:!w-[min(34rem,100vw)] lg:max-w-[calc(100%-380px)] xl:max-w-[calc(100%-var(--sb)-380px)]"
             style={{
               width: inspectorW,
               minWidth: INSPECTOR_MIN_W,
-              ["--sb" as string]: sidebarVisibleDesktop ? `${SIDEBAR_W}px` : "0px",
+              ["--sb" as string]: sidebarVisibleDesktop ? `${sidebarW}px` : "0px",
             }}
           >
             <div
@@ -1081,27 +1206,35 @@ function VisualizerContent() {
               <>
                 <div className="flex-none px-4 pt-3 pb-2 flex items-start justify-between gap-3">
                   {comparing ? (
-                    <div className="flex items-center gap-2 text-body font-mono min-w-0 flex-wrap">
-                      <span className="px-2 py-1 rounded-md bg-accent/15 text-accent border border-accent/40">A {selectedHash!.slice(0, 7)}</span>
-                      <button
-                        onClick={swapSides}
-                        className="btn-ghost w-7 h-7 rounded-md"
-                        title="Swap base and target"
-                        aria-label="Swap base and target"
-                      >
-                        ⇄
-                      </button>
-                      <span className="px-2 py-1 rounded-md bg-warn/15 text-warn border border-warn/40">B {compareHash!.slice(0, 7)}</span>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <CompareRow side="A" label="Base" hash={selectedHash!} subject={nodeById.get(selectedHash!)?.data.message} tone="accent" />
+                      <CompareRow side="B" label="Compare" hash={compareHash!} subject={nodeById.get(compareHash!)?.data.message} tone="warn" />
+                      <div className="flex items-center gap-3 pt-0.5">
+                        <button onClick={swapSides} className="btn h-7 px-2.5 rounded-md text-body inline-flex items-center gap-1.5" aria-label="Swap base and compare commits">
+                          <span aria-hidden>⇄</span> Swap
+                        </button>
+                        <ChangeSummaryLine summary={changeSummary} error={changeSummaryError} />
+                      </div>
                     </div>
                   ) : (
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-[15px] font-semibold leading-snug m-0 break-words line-clamp-4" title={subject}>
-                        {selectedCommit ? subject || "(no message)" : "Loading commit…"}
+                      <h2 className="text-title font-semibold m-0 break-words line-clamp-4" title={subject}>
+                        {selectedCommit ? subject || "(no message)" : <span className="inline-block h-4 w-2/3 rounded bg-raised animate-pulse motion-reduce:animate-none align-middle" />}
                       </h2>
-                      <div className="mt-1 flex items-center gap-1 text-body text-muted min-w-0">
-                        <span className="font-mono">{selectedHash!.slice(0, 7)}</span>
+                      <div className="mt-1 flex items-center gap-1 text-body text-muted min-w-0 flex-wrap">
+                        <span className="font-mono text-caption">{selectedHash!.slice(0, 7)}</span>
                         <CopyButton text={selectedHash!} label="Copy full hash" />
+                        {selectedCommit && (
+                          <span className="min-w-0 truncate">
+                            {selectedCommit.author.name} · {timeAgo(selectedCommit.author.timestamp)}
+                          </span>
+                        )}
                       </div>
+                      {selectedCommit && (
+                        <div className="mt-1.5">
+                          <ChangeSummaryLine summary={changeSummary} error={changeSummaryError} />
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center gap-0.5 flex-none -mr-1.5">
@@ -1230,6 +1363,11 @@ function VisualizerContent() {
                         commitHash={filesHash}
                         onGoToCommit={goTo}
                         onFileHistory={(file, hashes) => setFileSet(file && hashes ? { file, hashes } : null)}
+                        changes={!comparing || filesSide === "B" ? changesMap : null}
+                        onViewChanges={(path) => {
+                          setFocusFile(path);
+                          setTab("changes");
+                        }}
                       />
                     </div>
                   )}
@@ -1247,6 +1385,7 @@ function VisualizerContent() {
                             to={diffTo}
                             mode={diffMode}
                             onModeChange={changeDiffMode}
+                            focusPath={focusFile}
                           />
                         </>
                       ) : (
@@ -1349,4 +1488,52 @@ function timeAgo(unixSeconds: number): string {
     }
   }
   return "just now";
+}
+
+/** Files / additions / deletions from the real diff. Shows nothing it cannot back with data. */
+function ChangeSummaryLine({
+  summary,
+  error,
+}: {
+  summary: { totalFiles: number; additions: number; deletions: number; statsLimited: boolean } | null;
+  error: string | null;
+}) {
+  if (error) return <span className="text-caption text-faint">Change summary unavailable</span>;
+  if (!summary) return <span className="inline-block h-3.5 w-40 rounded bg-raised animate-pulse motion-reduce:animate-none" aria-label="Loading change summary" />;
+  return (
+    <p className="m-0 font-mono text-caption tabular-nums flex items-center gap-3 flex-wrap" aria-label="Change summary">
+      <span className="text-muted">
+        {summary.totalFiles} file{summary.totalFiles === 1 ? "" : "s"} changed
+      </span>
+      <span className="text-add" aria-label={`${summary.additions} lines added`}>
+        +{summary.additions}
+      </span>
+      <span className="text-del" aria-label={`${summary.deletions} lines deleted`}>
+        −{summary.deletions}
+      </span>
+      {summary.statsLimited && <span className="text-faint">line counts partial</span>}
+    </p>
+  );
+}
+
+function CompareRow({ side, label, hash, subject, tone }: { side: "A" | "B"; label: string; hash: string; subject?: string; tone: "accent" | "warn" }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <span
+        className={`flex-none w-5 h-5 rounded text-caption font-bold flex items-center justify-center ${tone === "accent" ? "bg-accent text-ground" : "bg-warn text-ground"}`}
+        aria-hidden
+      >
+        {side}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="m-0 text-caption text-faint">
+          {label} ({side})
+        </p>
+        <p className="m-0 text-body min-w-0 truncate" title={subject}>
+          <span className="font-mono text-caption text-muted mr-2">{hash.slice(0, 7)}</span>
+          {subject?.split("\n")[0] || "—"}
+        </p>
+      </div>
+    </div>
+  );
 }

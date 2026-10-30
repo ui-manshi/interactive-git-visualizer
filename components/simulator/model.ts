@@ -159,8 +159,8 @@ function script(commands: string[]): SimState {
 export const SCENARIOS: { id: string; name: string; hint: string; build: () => SimState }[] = [
   {
     id: "diverged",
-    name: "Diverged branches",
-    hint: "main and feature both moved on. Try git merge main, then undo and try git rebase main.",
+    name: "Merge vs rebase: diverged branches",
+    hint: "main and feature both moved on. Try git merge main, then Undo and try git rebase main. Compare the two graphs.",
     build: () =>
       script([
         "git commit",
@@ -186,6 +186,24 @@ export const SCENARIOS: { id: string; name: string; hint: string; build: () => S
         "git commit",
         "git checkout main",
       ]),
+  },
+  {
+    id: "detached",
+    name: "Detached HEAD",
+    hint: "HEAD points at C2, a commit, not a branch. Try git commit here, then git checkout main: the new commit is no longer reachable. Recover it with git branch rescue <hash>.",
+    build: () => script(["git commit", "git commit", "git commit", "git checkout C2"]),
+  },
+  {
+    id: "lost",
+    name: "Recover a lost commit",
+    hint: "A reset just moved main back and left C4 orphaned (faded). Run git branch rescue followed by the hash shown under C4 to point a branch at it again.",
+    build: () => script(["git commit", "git commit", "git commit", "git commit", "git reset --hard HEAD~1"]),
+  },
+  {
+    id: "undo-ways",
+    name: "Reset, revert or checkout",
+    hint: "Four commits on main. Try git reset --hard HEAD~1 (moves the branch back), Undo, then git revert HEAD (adds a commit that undoes the last one), Undo, then git checkout C2 (moves only HEAD).",
+    build: () => script(["git commit", "git commit", "git commit", "git commit"]),
   },
   { id: "empty", name: "Empty repository", hint: "Start from nothing: git commit, git branch, git checkout...", build: emptyState },
 ];

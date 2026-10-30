@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { Tip } from "./Tooltip";
 
-/** The one app bar used by every screen: fixed 48px, single row, one baseline. */
-export function Toolbar({ children, label = "Application" }: { children: ReactNode; label?: string }) {
+/** The one app bar used by every screen: sticky, fixed 48px, single row, one baseline. */
+export function Toolbar({ children, label = "Application", compact = false }: { children: ReactNode; label?: string; compact?: boolean }) {
   return (
     <header
       role="banner"
       aria-label={label}
-      className="flex-none h-12 flex items-center gap-2 px-3 bg-surface min-w-0"
+      className={`sticky top-0 z-40 flex-none ${compact ? "h-10 bg-[rgb(23_26_29)]" : "h-12 bg-surface"} flex items-center gap-2 px-3 border-b border-line/70 min-w-0 overflow-x-clip`}
     >
       {children}
     </header>
@@ -32,10 +33,52 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export function ToolbarDivider() {
-  return <span className="w-px h-5 bg-line flex-none mx-1" aria-hidden />;
+  return <span className="block w-px h-5 bg-line flex-none mx-1" aria-hidden />;
 }
 
 export const toolbarBtn = "h-8 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap";
+
+/**
+ * A primary navigation item. The active item shows a 2px accent bar on the toolbar's bottom
+ * edge and brighter text; it also sets aria-current so the state is not colour-only.
+ */
+export function NavTab({
+  label,
+  active,
+  href,
+  onClick,
+  tip,
+  shortcut,
+}: {
+  label: string;
+  active?: boolean;
+  href?: string;
+  onClick?: () => void;
+  tip?: string;
+  shortcut?: string;
+}) {
+  const cls = `relative h-12 px-3 inline-flex items-center text-body whitespace-nowrap transition-colors ${
+    active ? "text-fg font-medium" : "text-muted hover:text-fg"
+  } after:absolute after:left-2 after:right-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors ${
+    active ? "after:bg-accent" : "after:bg-transparent"
+  }`;
+  const inner = href ? (
+    <Link href={href} className={cls} aria-current={active ? "page" : undefined}>
+      {label}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls} aria-current={active ? "page" : undefined}>
+      {label}
+    </button>
+  );
+  return tip ? (
+    <Tip label={tip} shortcut={shortcut}>
+      {inner}
+    </Tip>
+  ) : (
+    inner
+  );
+}
 
 export function IconButton({
   label,
@@ -43,24 +86,31 @@ export function IconButton({
   children,
   pressed,
   className = "",
+  shortcut,
+  tipSide = "bottom",
+  tipAlign = "center",
 }: {
   label: string;
   onClick?: () => void;
   children: ReactNode;
   pressed?: boolean;
   className?: string;
+  shortcut?: string;
+  tipSide?: "top" | "bottom" | "left" | "right";
+  tipAlign?: "center" | "start" | "end";
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      aria-pressed={pressed}
-      className={`btn-ghost w-8 h-8 rounded-md inline-flex items-center justify-center flex-none ${className}`}
-    >
-      {children}
-    </button>
+    <Tip label={label} shortcut={shortcut} side={tipSide} align={tipAlign}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        aria-pressed={pressed}
+        className={`btn-ghost w-8 h-8 rounded-md inline-flex items-center justify-center flex-none ${className}`}
+      >
+        {children}
+      </button>
+    </Tip>
   );
 }
 
@@ -81,7 +131,7 @@ export function MoreMenu({ children, label = "More actions" }: { children: React
   }, [open]);
   return (
     <div ref={ref} className="relative flex-none">
-      <IconButton label={label} pressed={open} onClick={() => setOpen((o) => !o)}>
+      <IconButton label={label} pressed={open} onClick={() => setOpen((o) => !o)} tipAlign="end">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
           <circle cx="3.5" cy="8" r="1.3" />
           <circle cx="8" cy="8" r="1.3" />

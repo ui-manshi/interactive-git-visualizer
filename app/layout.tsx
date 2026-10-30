@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "Git Visualizer",
@@ -21,7 +22,9 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
         />
       </head>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

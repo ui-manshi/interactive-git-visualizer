@@ -16,19 +16,19 @@ export interface RefInfo {
 }
 
 /**
- * Branch colours. The interface accent (teal) is deliberately absent: teal means "you can act
- * here", so a colour in the graph can only ever mean "this is a branch". Blue goes to the
- * trunk (main/master), then the rest in order of recency.
+ * Branch colours. The interface accent (blue) is deliberately absent: blue means "you can act
+ * here", so a colour in the graph can only ever mean "this is a branch". The trunk
+ * (main/master) gets the first colour, then the rest in order of recency.
  */
 export const BRANCH_PALETTE = [
-  "#6FA3EF", // blue
-  "#A78BE3", // violet
-  "#D9A441", // amber
-  "#8CB369", // green
-  "#D9798B", // rose
-  "#4FB3CF", // cyan
-  "#C58F6B", // copper
-  "#C2B86A", // sand
+  "#A78BFA", // violet
+  "#54D6B0", // mint
+  "#F2BC66", // amber
+  "#E58AB3", // pink
+  "#5CC4E0", // cyan
+  "#C98F6B", // copper
+  "#B7D06A", // lime
+  "#9AA7D6", // slate
 ];
 
 export interface BranchModel {
