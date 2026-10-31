@@ -33,7 +33,7 @@ export default function FilterBar({
 
   return (
     <div role="search" className="flex-none px-3 pt-3 pb-2 space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           ref={inputRef}
           type="search"
@@ -47,7 +47,7 @@ export default function FilterBar({
           }}
           placeholder="Search commits (press /)"
           aria-label="Search commits"
-          className={`${field} flex-1 min-w-0 max-w-sm`}
+          className={`${field} flex-1 min-w-[9rem] sm:max-w-sm`}
         />
         <button
           type="button"
@@ -61,7 +61,7 @@ export default function FilterBar({
         </button>
 
         {active && (
-          <div className="flex items-center gap-1.5 ml-auto text-body">
+          <div className="flex items-center gap-1.5 sm:ml-auto text-body w-full sm:w-auto justify-between sm:justify-start">
             <span className="text-muted whitespace-nowrap" aria-live="polite">
               {matchCount === 0 ? "No matches" : `${matchCount} of ${total}`}
             </span>
@@ -97,13 +97,13 @@ export default function FilterBar({
       </div>
 
       {open && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
           {authors.length > 1 && (
             <select
               value={value.author}
               onChange={(e) => set({ author: e.target.value })}
               aria-label="Filter by author"
-              className={`${field} max-w-[10rem]`}
+              className={`${field} w-full sm:w-auto sm:max-w-[10rem]`}
             >
               <option value="">All authors</option>
               {authors.map((a) => (
@@ -118,7 +118,7 @@ export default function FilterBar({
               value={value.branch}
               onChange={(e) => set({ branch: e.target.value })}
               aria-label="Show only commits reachable from branch"
-              className={`${field} max-w-[10rem]`}
+              className={`${field} w-full sm:w-auto sm:max-w-[10rem]`}
             >
               <option value="">All branches</option>
               {branches.map((b) => (
@@ -128,24 +128,24 @@ export default function FilterBar({
               ))}
             </select>
           )}
-          <label className="flex items-center gap-1 text-body text-muted">
+          <label className="flex items-center gap-1 text-body text-muted min-w-0">
             From
             <input
               type="date"
               value={value.from}
               max={value.to || undefined}
               onChange={(e) => set({ from: e.target.value })}
-              className={field}
+              className={`${field} min-w-0 flex-1`}
             />
           </label>
-          <label className="flex items-center gap-1 text-body text-muted">
+          <label className="flex items-center gap-1 text-body text-muted min-w-0">
             To
             <input
               type="date"
               value={value.to}
               min={value.from || undefined}
               onChange={(e) => set({ to: e.target.value })}
-              className={field}
+              className={`${field} min-w-0 flex-1`}
             />
           </label>
         </div>

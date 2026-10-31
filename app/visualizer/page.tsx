@@ -16,6 +16,7 @@ import { Brand, IconButton, MoreMenu, Toolbar, ToolbarDivider, menuItem } from "
 import { Tip } from "@/components/Tooltip";
 import { useToast } from "@/components/Toast";
 import { useDiffSummary } from "@/lib/diffClient";
+import { NARROW_QUERY, useMediaQuery } from "@/lib/useMediaQuery";
 import { EMPTY_FILTER } from "@/components/graphFilter";
 import { CopyButton, HashValue, MetaGrid, MetaRow } from "@/components/CommitDetails";
 import { FlagIcon } from "@/components/CommitNode";
@@ -153,6 +154,11 @@ function VisualizerContent() {
   const [inspectorW, setInspectorW] = useState(initial.diff === "split" ? 720 : INSPECTOR_DEFAULT_W);
   const [sidebarDesktop, setSidebarDesktop] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Below 1024px the inspector is an overlay sheet. While comparing, that sheet must not cover the
+  // graph until both commits are picked, and it can be put away again without losing the picks.
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const [sheetHidden, setSheetHidden] = useState(false);
+  const [cmpBranchesOpen, setCmpBranchesOpen] = useState(true);
   const [filter, setFilter] = useState<FilterState>(initial.filter);
   const [helpOpen, setHelpOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -230,6 +236,11 @@ function VisualizerContent() {
     };
   }, [repoPath, maxCommits]);
 
+  // On short screens (phones in landscape) the branch-compare form would crowd out the branch list.
+  useEffect(() => {
+    if (window.innerHeight < 720) setCmpBranchesOpen(false);
+  }, []);
+
   // Pre-fill the branch-compare pickers once branches are known.
   useEffect(() => {
     if (refs.length < 2 || cmpDraft.base) return;
@@ -256,6 +267,7 @@ function VisualizerContent() {
 
   function handleSelectCommit(hash: string) {
     setDrawerOpen(false);
+    setSheetHidden(false);
     setFocusFile(null);
     if (!compareMode) {
       setSelectedHash(hash);
@@ -272,9 +284,23 @@ function VisualizerContent() {
     }
   }
 
+  // The single way in and out of compare mode (toolbar button, the narrow-screen menu and the "m"
+  // shortcut all call this). Leaving also drops the base and target picks so the graph returns to
+  // normal browsing with no compare markers and the inspector closed.
   function toggleCompareMode() {
-    setCompareMode((on) => !on);
+    if (compareMode) setSelectedHash(null);
+    setCompareMode(!compareMode);
     setCompareHash(null);
+    setSheetHidden(false);
+    setFilesSide("A");
+    setTab("details");
+  }
+
+  /** Start over inside compare mode: forget both picks but stay in compare mode. */
+  function resetCompare() {
+    setSelectedHash(null);
+    setCompareHash(null);
+    setSheetHidden(false);
     setFilesSide("A");
     setTab("details");
   }
@@ -285,6 +311,12 @@ function VisualizerContent() {
   }
 
   function closePanel() {
+    // Phone/tablet: closing the comparison sheet returns to the graph but keeps A and B, so the
+    // picks stay marked and "View changes" brings the sheet back.
+    if (narrow && compareMode && selectedHash && compareHash) {
+      setSheetHidden(true);
+      return;
+    }
     if (selectedHash) {
       setSelectedHash(null);
       setCompareHash(null);
@@ -336,6 +368,9 @@ function VisualizerContent() {
   }, [branchCmp, refs]);
   const showBranchPanel = !!cmpRefs && !selectedHash;
   const panelOpen = !!selectedHash || showBranchPanel;
+  // What is actually drawn as the inspector. Docked (lg+) it follows panelOpen; as an overlay it is
+  // held back while the second commit is still to be picked, or after the person put it away.
+  const inspectorOpen = panelOpen && !(narrow && compareMode && !showBranchPanel && (!comparing || sheetHidden));
   const repoName = shortRepoName(repoPath);
 
   // ---- shareable link: mirror the view state into the URL ----
@@ -538,7 +573,8 @@ function VisualizerContent() {
       if (helpOpen) setHelpOpen(false);
       else if (drawerOpen) setDrawerOpen(false);
       else if (typing) t!.blur();
-      else if (panelOpen) closePanel();
+      else if (inspectorOpen) closePanel();
+      else if (narrow && compareMode && selectedHash) resetCompare();
       else if (replay !== null) {
         setReplay(null);
         setPlaying(false);
@@ -697,23 +733,23 @@ function VisualizerContent() {
   return (
     <main className="h-dvh flex flex-col bg-ground text-fg overflow-hidden">
       <Toolbar compact>
-        {/* Left: panel toggle, product, repository and checked-out branch */}
-        <IconButton label="Toggle sidebar" onClick={toggleSidebar} pressed={sidebarDesktop || drawerOpen} tipAlign="start" className="!w-7 !h-7">
+        {/* Context: panel toggle, product, repository and checked-out branch */}
+        <IconButton label="Toggle sidebar" onClick={toggleSidebar} pressed={sidebarDesktop || drawerOpen} tipAlign="start">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden>
             <rect x="2" y="3" width="12" height="10" rx="1.5" />
             <path d="M6 3v10" />
           </svg>
         </IconButton>
         <Brand compact />
-        <span className="hidden sm:block">
+        <span className="hidden sm:flex items-center">
           <ToolbarDivider />
         </span>
-        <div className="flex items-center gap-2 min-w-0" aria-live="polite">
-          <span className="font-mono text-body font-medium text-fg truncate min-w-0" title={repoPath}>
+        <div className="flex items-center gap-2 min-w-0 flex-1 xl:flex-none xl:max-w-[32rem]" aria-live="polite">
+          <span className="font-mono text-body font-medium truncate min-w-0" title={repoPath}>
             {loading ? "Reading repository…" : error ? "Could not open this repository" : repoName}
           </span>
           {ready && head && (
-            <Tip label={head.branch ? `Checked out: ${head.branch}` : `HEAD is detached at ${head.hash}`} className="min-w-0 flex-none">
+            <Tip label={head.branch ? `Checked out: ${head.branch}` : `HEAD is detached at ${head.hash}`} className="flex-none">
               <span className="hidden sm:inline-flex items-center gap-1.5 h-6 px-2 rounded-md bg-raised text-caption text-muted">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden className="flex-none">
                   <circle cx="4" cy="3.5" r="1.6" />
@@ -727,49 +763,72 @@ function VisualizerContent() {
           )}
         </div>
 
-        <span className="flex-1" />
+        <span className="flex-1 hidden xl:block" />
 
-        {/* Right: Graph | Stats, Compare commits, Simulator, New repository, Copy link, ? */}
+        {/* Views and compare: a Graph | Stats switch (filled active state) and the compare toggle */}
         {ready && (
-          <>
-            <div role="group" aria-label="View" className="segmented flex text-body rounded-md overflow-hidden flex-none">
-              <Tip label="Commit graph" shortcut="g" align="start">
-                <button onClick={() => setView("graph")} aria-pressed={view === "graph"} className={`h-7 px-3 rounded-md ${view === "graph" ? "bg-raised text-fg" : "text-muted hover:text-fg"}`}>
-                  Graph
-                </button>
-              </Tip>
-              <Tip label="Repository statistics" shortcut="g">
-                <button onClick={() => setView("stats")} aria-pressed={view === "stats"} className={`h-7 px-3 rounded-md ${view === "stats" ? "bg-raised text-fg" : "text-muted hover:text-fg"}`}>
-                  Stats
-                </button>
-              </Tip>
+          <nav aria-label="Views" className="flex items-center gap-2 flex-none">
+            <div role="group" aria-label="View" className="segmented flex items-center gap-0.5 p-0.5 rounded-md">
+              {(
+                [
+                  ["graph", "Graph", "Commit graph"],
+                  ["stats", "Stats", "Repository statistics"],
+                ] as const
+              ).map(([id, text, tip]) => (
+                <Tip key={id} label={tip} shortcut="g">
+                  <button
+                    type="button"
+                    onClick={() => setView(id)}
+                    aria-pressed={view === id}
+                    className="h-6 px-3 rounded text-body text-muted hover:text-fg transition-colors aria-[pressed=true]:bg-hover aria-[pressed=true]:text-fg"
+                  >
+                    {text}
+                  </button>
+                </Tip>
+              ))}
             </div>
-            <Tip label="Compare two commits" shortcut="m">
-              <button
-                onClick={toggleCompareMode}
-                aria-pressed={compareMode}
-                aria-label={compareMode ? "Exit compare mode" : "Compare commits"}
-                className={`${compareMode ? "ring-1 ring-inset ring-accent text-accent bg-accent/10" : "btn"} h-7 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap flex-none`}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M4 2.5v8M4 10.5a2 2 0 1 0 0 3 2 2 0 0 0 0-3ZM12 13.5v-8M12 5.5a2 2 0 1 0 0-3 2 2 0 0 0 0 3Z" />
-                </svg>
-                <span className="hidden lg:inline">{compareMode ? "Exit compare" : "Compare commits"}</span>
-              </button>
-            </Tip>
-          </>
+            <span className="inline-flex">
+              <Tip label={compareMode ? "Exit compare mode" : "Compare two commits"} shortcut="m">
+                <button
+                  type="button"
+                  onClick={toggleCompareMode}
+                  data-active={compareMode}
+                  aria-label={compareMode ? "Exit compare mode" : "Compare two commits"}
+                  className="btn h-7 px-2 sm:px-3 rounded-md text-body inline-flex items-center gap-2 whitespace-nowrap data-[active=true]:bg-accent/15 data-[active=true]:text-accent data-[active=true]:hover:bg-accent/25"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <circle cx="18" cy="18" r="3" />
+                    <circle cx="6" cy="6" r="3" />
+                    <path d="M13 6h3a2 2 0 0 1 2 2v7" />
+                    <path d="M11 18H8a2 2 0 0 1-2-2V9" />
+                  </svg>
+                  {/* The ghost label reserves the longer text's width so the bar does not shift on toggle. */}
+                  <span className="hidden md:inline-grid">
+                    <span className="col-start-1 row-start-1 text-center">{compareMode ? "Exit compare" : "Compare commits"}</span>
+                    <span className="col-start-1 row-start-1 invisible" aria-hidden>
+                      Compare commits
+                    </span>
+                  </span>
+                </button>
+              </Tip>
+            </span>
+          </nav>
         )}
+
+        {/* Quiet text actions, same row, right-aligned */}
         <div className="hidden xl:flex items-center gap-0.5 flex-none">
-          <Link href="/simulator" className="btn-ghost h-7 px-2.5 rounded-md text-body inline-flex items-center">
+          <Link href="/simulator" className="btn-ghost h-7 px-3 rounded-md text-body inline-flex items-center whitespace-nowrap">
             Simulator
           </Link>
-          <Link href="/" className="btn-ghost h-7 px-2.5 rounded-md text-body inline-flex items-center">
-            New repository
-          </Link>
+          <Tip label="Open another repository">
+            <Link href="/" className="btn-ghost h-7 px-3 rounded-md text-body inline-flex items-center whitespace-nowrap">
+              New repository
+            </Link>
+          </Tip>
           {ready && (
             <>
-              <Tip label="Copy a link to this exact view">
-                <button onClick={copyLink} className="btn-ghost h-7 px-2.5 rounded-md text-body">
+              <Tip label="Copy a link to this view">
+                <button type="button" onClick={copyLink} className="btn-ghost h-7 px-3 rounded-md text-body inline-flex items-center whitespace-nowrap">
                   {linkCopied ? "Link copied" : "Copy link"}
                 </button>
               </Tip>
@@ -794,7 +853,7 @@ function VisualizerContent() {
             onClick={() => setDrawerOpen(false)}
           />
         )}
-        {panelOpen && (
+        {inspectorOpen && (
           <div className="lg:hidden fixed inset-x-0 top-10 bottom-0 z-30 bg-ground/70" aria-hidden onClick={closePanel} />
         )}
 
@@ -806,7 +865,7 @@ function VisualizerContent() {
             sidebarVisibleDesktop ? "xl:flex" : "xl:hidden"
           } ${
             drawerOpen
-              ? "max-xl:flex max-xl:fixed max-xl:left-0 max-xl:top-10 max-xl:bottom-0 max-xl:z-40"
+              ? "max-xl:flex max-xl:fixed max-xl:left-0 max-xl:top-10 max-xl:bottom-0 max-xl:z-40 max-xl:pb-[env(safe-area-inset-bottom)]"
               : "max-xl:hidden"
           }`}
           style={{ ["--sw" as string]: `${sidebarW}px` }}
@@ -927,7 +986,7 @@ function VisualizerContent() {
                           ? `${t.annotated ? "Annotated tag" : "Tag"} ${t.name}${t.message ? `: ${t.message}` : ""}`
                           : "This commit is older than the history loaded so far"
                       }
-                      className="w-full text-left flex items-center gap-2 h-7 px-4 text-body hover:bg-raised disabled:opacity-40 disabled:hover:bg-transparent"
+                      className="w-full text-left flex items-center gap-2 h-7 [@media(pointer:coarse)]:h-10 px-4 text-body hover:bg-raised disabled:opacity-40 disabled:hover:bg-transparent"
                     >
                       <span className={`flex-none ${isReleaseTag(t.name) ? "text-warn" : "text-faint"}`}>
                         <FlagIcon size={12} />
@@ -944,7 +1003,7 @@ function VisualizerContent() {
           {/* Fixed footer: comparison controls and legend never overlap the list above. */}
           <div className="flex-none pt-2">
             {refs.length >= 2 && (
-              <details open className="group">
+              <details open={cmpBranchesOpen} onToggle={(e) => setCmpBranchesOpen((e.currentTarget as HTMLDetailsElement).open)} className="group">
                 <summary className="h-8 px-4 flex items-center gap-1.5 font-mono text-caption text-muted cursor-pointer select-none hover:text-fg list-none [&::-webkit-details-marker]:hidden">
                   <svg className="transition-transform group-open:rotate-90" width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
                     <path d="M3 1.5 7 5 3 8.5z" />
@@ -975,6 +1034,7 @@ function VisualizerContent() {
                       setSelectedHash(null);
                       setCompareHash(null);
                       setBranchCmp({ ...cmpDraft });
+                      setDrawerOpen(false);
                     }}
                     className="btn w-full text-body h-8 rounded-md"
                   >
@@ -1082,15 +1142,43 @@ function VisualizerContent() {
                 onStep={stepMatch}
                 inputRef={searchRef}
               />
-              {compareMode && !comparing && (
-                <div className="flex-none flex items-center gap-2 px-3 min-h-8 py-1 text-body bg-accent/10 text-fg" role="status">
-                  {selectedHash ? (
-                    <>
-                      Base is <span className="font-mono text-fg">{selectedHash.slice(0, 7)}</span>. Now click the commit to compare it with.
-                    </>
-                  ) : (
-                    "Compare mode: click the first commit (the base)."
-                  )}
+              {compareMode && (
+                <div
+                  role="status"
+                  className="flex-none flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 text-body bg-accent/10 text-fg"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ComparePick side="A" hash={selectedHash} active={!selectedHash} />
+                    <span aria-hidden className="text-faint">→</span>
+                    <ComparePick side="B" hash={compareHash} active={!!selectedHash && !compareHash} />
+                  </div>
+                  <span className="text-muted min-w-0 flex-1 basis-40">
+                    {!selectedHash
+                      ? "Tap or click the first commit (the base)."
+                      : !compareHash
+                      ? "Now tap the commit to compare it with."
+                      : "Tap any commit to start a new comparison."}
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-none">
+                    {comparing && narrow && sheetHidden && (
+                      <button onClick={() => setSheetHidden(false)} className="btn-primary h-8 px-3 rounded-md text-body">
+                        View changes
+                      </button>
+                    )}
+                    {comparing && (
+                      <button onClick={swapSides} className="btn h-8 px-2.5 rounded-md text-body" aria-label="Swap base and compare commits">
+                        ⇄ Swap
+                      </button>
+                    )}
+                    {selectedHash && (
+                      <button onClick={resetCompare} className="btn h-8 px-2.5 rounded-md text-body">
+                        Reset
+                      </button>
+                    )}
+                    <button onClick={toggleCompareMode} className="btn-ghost h-8 px-2.5 rounded-md text-body">
+                      Done
+                    </button>
+                  </div>
                 </div>
               )}
               {fileSet && (
@@ -1157,10 +1245,10 @@ function VisualizerContent() {
         </section>
 
         {/* ---------------- Inspector ---------------- */}
-        {panelOpen && (
+        {inspectorOpen && (
           <aside
             aria-label="Commit inspector"
-            className="flex-none relative flex flex-col min-h-0 bg-surface border-l border-line/70 max-lg:fixed max-lg:right-0 max-lg:top-10 max-lg:bottom-0 max-lg:z-40 max-lg:!w-[min(34rem,100vw)] lg:max-w-[calc(100%-380px)] xl:max-w-[calc(100%-var(--sb)-380px)]"
+            className="flex-none relative flex flex-col min-h-0 bg-surface border-l border-line/70 max-lg:fixed max-lg:right-0 max-lg:top-10 max-lg:bottom-0 max-lg:z-40 max-lg:!w-[min(34rem,100vw)] max-lg:!min-w-0 max-sm:!w-screen max-lg:pb-[env(safe-area-inset-bottom)] lg:max-w-[calc(100%-380px)] xl:max-w-[calc(100%-var(--sb)-380px)]"
             style={{
               width: inspectorW,
               minWidth: INSPECTOR_MIN_W,
@@ -1210,7 +1298,7 @@ function VisualizerContent() {
                       <CompareRow side="A" label="Base" hash={selectedHash!} subject={nodeById.get(selectedHash!)?.data.message} tone="accent" />
                       <CompareRow side="B" label="Compare" hash={compareHash!} subject={nodeById.get(compareHash!)?.data.message} tone="warn" />
                       <div className="flex items-center gap-3 pt-0.5">
-                        <button onClick={swapSides} className="btn h-7 px-2.5 rounded-md text-body inline-flex items-center gap-1.5" aria-label="Swap base and compare commits">
+                        <button onClick={swapSides} className="btn h-8 lg:h-7 px-2.5 rounded-md text-body inline-flex items-center gap-1.5" aria-label="Swap base and compare commits">
                           <span aria-hidden>⇄</span> Swap
                         </button>
                         <ChangeSummaryLine summary={changeSummary} error={changeSummaryError} />
@@ -1247,7 +1335,7 @@ function VisualizerContent() {
                         {inspectorExpanded ? <path d="m9 3.5 4.5 4.5L9 12.5M2.5 8h10M13.5 3v10" /> : <path d="M7 3.5 2.5 8 7 12.5M13.5 8h-10M2.5 3v10" />}
                       </svg>
                     </IconButton>
-                    <IconButton label="Close panel (Esc)" onClick={closePanel}>
+                    <IconButton label="Close panel (Esc)" onClick={closePanel} className="max-lg:!w-10 max-lg:!h-10">
                       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
                         <path d="m3.5 3.5 9 9M12.5 3.5l-9 9" />
                       </svg>
@@ -1255,14 +1343,14 @@ function VisualizerContent() {
                   </div>
                 </div>
 
-                <div role="tablist" aria-label="Inspector views" className="flex-none px-3 flex gap-1">
+                <div role="tablist" aria-label="Inspector views" className="flex-none px-3 flex gap-1 overflow-x-auto">
                   {TABS.map((t) => (
                     <button
                       key={t}
                       role="tab"
                       aria-selected={tab === t}
                       onClick={() => setTab(t)}
-                      className={`px-2.5 h-9 text-body font-medium border-b-2 -mb-px transition-colors ${
+                      className={`px-3 lg:px-2.5 h-10 lg:h-9 flex-none text-body font-medium border-b-2 -mb-px transition-colors ${
                         tab === t ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg"
                       }`}
                     >
@@ -1271,7 +1359,7 @@ function VisualizerContent() {
                   ))}
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4">
                   {tab === "details" && (
                     <>
                       {detailError && <p className="text-del text-body m-0">{detailError}</p>}
@@ -1349,7 +1437,7 @@ function VisualizerContent() {
                               key={side}
                               onClick={() => setFilesSide(side)}
                               aria-pressed={filesSide === side}
-                              className={`px-2.5 h-7 rounded-md ${
+                              className={`px-2.5 h-8 lg:h-7 rounded-md ${
                                 filesSide === side ? "ring-1 ring-inset ring-accent text-fg bg-accent/10" : "btn text-muted hover:text-fg"
                               }`}
                             >
@@ -1441,7 +1529,7 @@ function RefRow({
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       title={`${ref_.name} @ ${ref_.hash}${isHead ? " (checked out)" : ""}`}
-      className={`w-full text-left flex items-center gap-2 h-7 px-4 text-body hover:bg-raised ${
+      className={`w-full text-left flex items-center gap-2 h-7 [@media(pointer:coarse)]:h-10 px-4 text-body hover:bg-raised ${
         selected ? "bg-raised shadow-[inset_2px_0_0_rgb(var(--accent))]" : ""
       }`}
     >
@@ -1535,5 +1623,22 @@ function CompareRow({ side, label, hash, subject, tone }: { side: "A" | "B"; lab
         </p>
       </div>
     </div>
+  );
+}
+
+/** One end of the comparison in the compare bar: the A/B badge and the picked commit (or a prompt). */
+function ComparePick({ side, hash, active }: { side: "A" | "B"; hash: string | null; active: boolean }) {
+  const tone = side === "A" ? "bg-accent" : "bg-warn";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 h-7 pl-1 pr-2 rounded-md ${
+        hash ? "bg-raised" : active ? "border border-dashed border-accent text-fg" : "border border-dashed border-line text-faint"
+      }`}
+    >
+      <span className={`w-5 h-5 rounded text-caption font-bold flex items-center justify-center text-ground ${tone}`} aria-hidden>
+        {side}
+      </span>
+      <span className="font-mono text-caption">{hash ? hash.slice(0, 7) : "pick…"}</span>
+    </span>
   );
 }

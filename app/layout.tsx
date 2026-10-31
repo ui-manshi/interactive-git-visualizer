@@ -1,10 +1,19 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "Git Visualizer",
   description: "Interactive Git version control visualizer",
+};
+
+// Without this, phones render the page at ~980px wide and shrink it, so none of the responsive
+// breakpoints apply. viewport-fit=cover lets the safe-area insets (notches, home bar) be used.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#101317",
 };
 
 export default function RootLayout({

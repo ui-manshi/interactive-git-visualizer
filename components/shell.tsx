@@ -5,12 +5,21 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { Tip } from "./Tooltip";
 
 /** The one app bar used by every screen: sticky, fixed 48px, single row, one baseline. */
-export function Toolbar({ children, label = "Application", compact = false }: { children: ReactNode; label?: string; compact?: boolean }) {
+export function Toolbar({
+  children,
+  label = "Application",
+  compact = false,
+}: {
+  children: ReactNode;
+  label?: string;
+  /** 40px instead of 48px. Used by the visualizer, whose bar carries the most controls. */
+  compact?: boolean;
+}) {
   return (
     <header
       role="banner"
       aria-label={label}
-      className={`sticky top-0 z-40 flex-none ${compact ? "h-10 bg-[rgb(23_26_29)]" : "h-12 bg-surface"} flex items-center gap-2 px-3 border-b border-line/70 min-w-0 overflow-x-clip`}
+      className={`sticky top-0 z-40 flex-none ${compact ? "h-10" : "h-12"} flex items-center gap-2 px-3 bg-surface border-b border-line/70 min-w-0 overflow-x-clip`}
     >
       {children}
     </header>
@@ -33,7 +42,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export function ToolbarDivider() {
-  return <span className="block w-px h-5 bg-line flex-none mx-1" aria-hidden />;
+  return <span className="w-px h-5 bg-line flex-none mx-1" aria-hidden />;
 }
 
 export const toolbarBtn = "h-8 px-2.5 rounded-md text-body inline-flex items-center gap-1.5 whitespace-nowrap";

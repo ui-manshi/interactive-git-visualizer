@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DiffSummary as Summary, FileChange, fetchDiffSummary } from "@/lib/diffClient";
 import { Lang, TOKEN_CLASS, highlightLine, langFor } from "@/lib/highlight";
+import { NARROW_QUERY, useMediaQuery } from "@/lib/useMediaQuery";
 
 // Mirrors NO_EOL in lib/commitDiff.ts (a marker on a last line with no trailing newline).
 const NO_EOL = "\u0001";
@@ -51,7 +52,11 @@ interface Props {
   focusPath?: string | null;
 }
 
-export default function DiffViewer({ repoPath, from, to, mode = "unified", onModeChange, focusPath = null }: Props) {
+export default function DiffViewer({ repoPath, from, to, mode: requestedMode = "unified", onModeChange, focusPath = null }: Props) {
+  // Two code columns do not fit a phone or a portrait tablet, so those always get the unified view
+  // (the saved side-by-side choice comes back on a wide screen).
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const mode: DiffMode = narrow ? "unified" : requestedMode;
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +131,7 @@ export default function DiffViewer({ repoPath, from, to, mode = "unified", onMod
           <span className="font-mono text-body text-del">−{summary.deletions}</span>
           {summary.statsLimited && <span className="text-muted"> (line counts skipped for some files)</span>}
         </p>
-        {onModeChange && (
+        {onModeChange && !narrow && (
           <div role="group" aria-label="Diff layout" className="segmented flex text-body rounded-md overflow-hidden">
             {(["unified", "split"] as DiffMode[]).map((m) => (
               <button

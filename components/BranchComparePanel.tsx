@@ -91,18 +91,18 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
           <h2 className="font-semibold text-title leading-snug m-0">Compare branches</h2>
           <p className="text-body text-muted mt-1 m-0 flex items-center gap-1.5 flex-wrap">
             <span className="font-mono text-fg">{base.name}</span>
-            <button onClick={onSwap} className="hover:text-fg px-1 rounded" title="Swap sides" aria-label="Swap sides">
+            <button onClick={onSwap} className="hover:text-fg px-2 py-1 -my-1 rounded" title="Swap sides" aria-label="Swap sides">
               ⇄
             </button>
             <span className="font-mono text-fg">{head.name}</span>
           </p>
         </div>
-        <button onClick={onClose} className="text-muted hover:text-fg w-7 h-7 rounded hover:bg-raised" aria-label="Close" title="Close">
+        <button onClick={onClose} className="text-muted hover:text-fg w-9 h-9 lg:w-7 lg:h-7 flex-none rounded hover:bg-raised" aria-label="Close" title="Close">
           ✕
         </button>
       </div>
 
-      <div role="tablist" className="px-4 flex gap-1 flex-shrink-0">
+      <div role="tablist" className="px-4 flex gap-1 flex-shrink-0 overflow-x-auto">
         {(
           [
             ["overview", "Overview"],
@@ -115,7 +115,7 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`px-3 py-2 text-body font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-3 py-2 text-body font-medium border-b-2 -mb-px transition-colors whitespace-nowrap flex-none ${
               tab === id ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg"
             }`}
           >
@@ -135,15 +135,15 @@ export default function BranchComparePanel({ repoPath, base, head, onGoToCommit,
           <>
             <p className="m-0 text-fg/90 leading-relaxed">{summary(data)}</p>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 min-[440px]:grid-cols-3 gap-2">
               <Stat label={`Ahead (${head.name})`} value={data.ahead.count} color="rgb(var(--blue))" />
               <Stat label={`Behind (${base.name})`} value={data.behind.count} color="rgb(var(--violet))" />
-              <div className="rounded-lg inset p-2.5">
+              <div className="rounded-lg inset p-2.5 col-span-2 min-[440px]:col-span-1">
                 <p className="text-caption text-muted m-0">Merge base</p>
                 {data.mergeBase ? (
                   <button
                     onClick={() => onGoToCommit(data.mergeBase!.hash)}
-                    className="font-mono text-body text-accent hover:underline mt-1"
+                    className="font-mono text-body text-accent hover:underline mt-1 py-1"
                     title={data.mergeBase.message}
                   >
                     {data.mergeBase.hash.slice(0, 7)}
@@ -216,7 +216,7 @@ function CommitList({
       <ul className="m-0 p-0 list-none rounded-lg inset overflow-hidden">
         {commits.map((c) => (
           <li key={c.hash} className="border-b border-white/[0.07] last:border-b-0">
-            <button onClick={() => onGoToCommit(c.hash)} className="w-full text-left px-2.5 py-1.5 hover:bg-raised">
+            <button onClick={() => onGoToCommit(c.hash)} className="w-full text-left px-2.5 py-2 lg:py-1.5 hover:bg-raised">
               <span className="block text-body text-fg truncate">{c.message}</span>
               <span className="block text-caption text-muted truncate">
                 <span className="font-mono text-fg">{c.hash.slice(0, 7)}</span> · {c.author} ·{" "}

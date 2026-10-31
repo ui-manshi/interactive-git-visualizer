@@ -29,7 +29,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastCtx.Provider value={notify}>
       {children}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] flex flex-col items-center gap-2 pointer-events-none" role="status" aria-live="polite">
+      <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[70] flex flex-col items-center gap-2 pointer-events-none max-w-[calc(100vw-2rem)]" role="status" aria-live="polite">
         {items.map((t) => (
           <div key={t.id} className="fade-in popover rounded-lg px-3 py-2 text-body flex items-center gap-2 pointer-events-auto">
             <span

@@ -55,6 +55,7 @@ const edgeTypes = { commit: CommitEdge };
 
 /** The commit table fills the available width, within these bounds (graph units). */
 const LABEL_W_MIN = 360;
+const LABEL_W_MIN_NARROW = 200;
 const LABEL_W_MAX = 1600;
 const EDGE_PAD = 12;
 
@@ -134,7 +135,9 @@ export default function CommitGraph({
   const mapVisible = showMap && overflowsView && nodes.length < 2500;
   // Controls and minimap live in their own right-hand gutter, so they never sit on top of commit text.
   const gutter = mapVisible ? MAP_W + 28 : 52;
-  const labelW = Math.min(LABEL_W_MAX, Math.max(LABEL_W_MIN, box.w - labelX - gutter - EDGE_PAD));
+  // On a phone the table is allowed to shrink so a commit row fits the screen without sideways panning.
+  const labelMin = box.w > 0 && box.w < 640 ? LABEL_W_MIN_NARROW : LABEL_W_MIN;
+  const labelW = Math.min(LABEL_W_MAX, Math.max(labelMin, box.w - labelX - gutter - EDGE_PAD));
 
   const refByName = useMemo(() => new Map(refs.map((r) => [r.name, r] as const)), [refs]);
 
@@ -158,7 +161,9 @@ export default function CommitGraph({
   }, [nodes, refByName, head, model]);
 
   // On a narrow view the refs column gives way first, so the message and date keep their room.
-  const refColW = refW > 0 ? Math.min(refW, Math.max(72, labelW - 300)) : 0;
+  // When even that is not enough (phones), the refs column is dropped so the message stays readable;
+  // the sidebar still lists every branch.
+  const refColW = refW > 0 && labelW >= 340 ? Math.min(refW, Math.max(72, labelW - 300)) : 0;
 
   const flowNodes: Node<RowData>[] = useMemo(
     () =>
@@ -299,6 +304,7 @@ export default function CommitGraph({
             )}
             <GraphControls
               labelX={labelX}
+              labelMin={labelMin}
               showMap={showMap}
               canMap={overflowsView && nodes.length < 2500}
               onToggleMap={() => setShowMap((v) => !v)}
@@ -310,7 +316,8 @@ export default function CommitGraph({
   );
 }
 
-const CTL = "h-7 w-8 rounded-md flex items-center justify-center text-muted hover:text-fg hover:bg-hover";
+const CTL =
+  "h-7 w-8 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-10 rounded-md flex items-center justify-center text-muted hover:text-fg hover:bg-hover";
 
 // Module-level on purpose: a component defined inside GraphControls would remount (and lose
 // keyboard focus) every time the zoom readout changes.
@@ -330,11 +337,13 @@ function Sep() {
 /** Zoom, fit and minimap controls in one group. */
 function GraphControls({
   labelX,
+  labelMin,
   showMap,
   canMap,
   onToggleMap,
 }: {
   labelX: number;
+  labelMin: number;
   showMap: boolean;
   canMap: boolean;
   onToggleMap: () => void;
@@ -347,7 +356,7 @@ function GraphControls({
 
   function fitWidth() {
     const vp = rf.getViewport();
-    const z = Math.min(1.25, Math.max(0.1, (size.w - 2 * EDGE_PAD) / (labelX + LABEL_W_MIN)));
+    const z = Math.min(1.25, Math.max(0.1, (size.w - 2 * EDGE_PAD) / (labelX + labelMin)));
     // Keep whatever row is in the middle of the view in the middle.
     const worldY = (size.h / 2 - vp.y) / vp.zoom;
     rf.setViewport({ x: EDGE_PAD, y: size.h / 2 - worldY * z, zoom: z }, { duration: 150 });

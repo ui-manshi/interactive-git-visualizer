@@ -21,13 +21,13 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
 
   return (
     <div
-      className="flex-none bg-surface px-3 h-11 flex items-center gap-3 min-w-0"
+      className="flex-none bg-surface px-3 min-h-11 flex items-center gap-2 sm:gap-3 min-w-0 safe-b safe-x"
       role="group"
       aria-label="Time travel"
     >
       <button
         onClick={onTogglePlay}
-        className="btn-primary flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
+        className="btn-primary flex-shrink-0 w-9 h-9 sm:w-7 sm:h-7 rounded-md flex items-center justify-center"
         aria-label={playing ? "Pause replay" : active ? "Resume replay" : "Replay history"}
         title={playing ? "Pause" : active ? "Resume" : "Replay history from the first commit"}
       >
@@ -53,7 +53,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
           onChange(v >= total - 1 ? null : v);
         }}
         aria-label="Scrub through history, oldest to newest"
-        className="flex-1 min-w-[6rem] accent-[rgb(var(--accent))]"
+        className="flex-1 min-w-[4rem] h-9 accent-[rgb(var(--accent))]"
       />
 
       <div className="hidden sm:block min-w-0 w-60 text-body leading-tight">
@@ -78,7 +78,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
             key={s}
             onClick={() => onSpeed(s)}
             aria-pressed={speed === s}
-            className={`text-caption px-1.5 h-6 rounded tabular-nums ${
+            className={`text-caption px-2 h-8 sm:px-1.5 sm:h-6 rounded tabular-nums ${
               speed === s ? "ring-1 ring-inset ring-accent bg-accent/10 text-accent" : "btn text-muted hover:text-fg"
             }`}
           >
@@ -88,7 +88,7 @@ export default function TimeTravel({ total, value, playing, speed, current, onCh
         {active && (
           <button
             onClick={() => onChange(null)}
-            className="text-caption px-2 h-6 rounded btn text-fg ml-1"
+            className="text-caption px-2 h-8 sm:h-6 rounded btn text-fg ml-1"
           >
             Latest
           </button>
