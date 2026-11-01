@@ -1,3 +1,10 @@
+// Self-hosted fonts (latin subset, font-display: swap). The old Google Fonts <link> was a
+// render-blocking request to another origin; these are same-origin, cached and only what is used.
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-500.css";
+import "@fontsource/inter/latin-600.css";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "@fontsource/jetbrains-mono/latin-500.css";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { ToastProvider } from "@/components/Toast";
@@ -23,14 +30,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-        />
-      </head>
       <body className="font-sans">
         <ToastProvider>{children}</ToastProvider>
       </body>

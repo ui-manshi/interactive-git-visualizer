@@ -67,8 +67,9 @@ export function collectReachableCommits(repoPath: string): Map<string, ParsedCom
     }
   }
 
-  while (queue.length > 0) {
-    const hash = queue.shift()!;
+  // Index into the queue instead of shift(): shift() is O(n), which made large histories quadratic.
+  for (let head = 0; head < queue.length; head++) {
+    const hash = queue[head];
     if (visited.has(hash)) continue;
 
     const obj = readCommit(repoPath, hash);

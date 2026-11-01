@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonResponse } from "@/lib/jsonResponse";
 import { listBranchRefs, listTagRefs, readHead, readRemoteUrl } from "@/lib/gitObjectParser";
 import { readCommit } from "@/lib/objectCache";
 import { resolveRepoPath } from "@/lib/repoResolver";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     const tags = listTagRefs(resolvedPath)
       .map((t) => ({ ...t, timestamp: readCommit(resolvedPath, t.hash).author.timestamp }))
       .sort((a, b) => b.timestamp - a.timestamp);
-    return NextResponse.json({ refs, tags, head: readHead(resolvedPath), remoteUrl: readRemoteUrl(resolvedPath) });
+    return jsonResponse(request, { refs, tags, head: readHead(resolvedPath), remoteUrl: readRemoteUrl(resolvedPath) });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },

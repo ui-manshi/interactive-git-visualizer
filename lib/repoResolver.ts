@@ -16,7 +16,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import crypto from "crypto";
-import { execSync } from "child_process";
+import { exec, execSync } from "child_process";
 import { invalidatePackCache } from "./packParser";
 
 const CLONE_CACHE_DIR = path.join(os.tmpdir(), "git-visualizer-clones");
@@ -36,6 +36,23 @@ const FETCH_TIMEOUT_MS = 2 * 60 * 1000;
 // in a remote repo would run `git fetch` (a network round-trip) on each click.
 const FETCH_INTERVAL_MS = 60 * 1000;
 const lastFetchAt = new Map<string, number>();
+
+// A refresh is a network round trip. Running it synchronously froze the whole server (every
+// request, including static files) for seconds on each page load; now the page is served from
+// the existing clone straight away and the new commits show up on the next load.
+const refreshing = new Set<string>();
+
+function refreshInBackground(dest: string) {
+  if (refreshing.has(dest)) return;
+  refreshing.add(dest);
+  exec("git fetch --all --quiet", { cwd: dest, timeout: FETCH_TIMEOUT_MS }, (err) => {
+    refreshing.delete(dest);
+    // A fetch may bring down a new pack; drop our cached idx lookups so packParser.ts
+    // re-scans the pack directory on the next read.
+    if (!err) invalidatePackCache(dest);
+    // Failure is non-fatal: we keep serving whatever was already cloned.
+  });
+}
 
 function isRemoteUrl(input: string): boolean {
   return /^(https?:\/\/|git@|ssh:\/\/)/i.test(input.trim());
@@ -83,18 +100,7 @@ export function resolveRepoPath(pathOrUrl: string): string {
     const last = lastFetchAt.get(dest) ?? 0;
     if (Date.now() - last > FETCH_INTERVAL_MS) {
       lastFetchAt.set(dest, Date.now());
-      try {
-        execSync("git fetch --all --quiet", {
-          cwd: dest,
-          stdio: "pipe",
-          timeout: FETCH_TIMEOUT_MS,
-        });
-        // A fetch may bring down a new pack; drop our cached idx lookups so
-        // packParser.ts re-scans the pack directory on the next read.
-        invalidatePackCache(dest);
-      } catch {
-        // Non-fatal — fall back to whatever was already cloned.
-      }
+      refreshInBackground(dest);
     }
     return dest;
   }

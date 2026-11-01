@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonResponse } from "@/lib/jsonResponse";
 import { buildCommitGraph } from "@/lib/graphBuilder";
 import { resolveRepoPath } from "@/lib/repoResolver";
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const parsed = maxParam ? parseInt(maxParam, 10) : NaN;
     const max = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), MAX_COMMITS) : undefined;
     const graph = buildCommitGraph(resolvedPath, max);
-    return NextResponse.json(graph);
+    return jsonResponse(request, graph);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },

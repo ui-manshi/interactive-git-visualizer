@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonResponse } from "@/lib/jsonResponse";
 import { diffCommits, diffFile } from "@/lib/commitDiff";
 import { resolveRepoPath } from "@/lib/repoResolver";
 
@@ -24,9 +25,9 @@ export async function GET(request: NextRequest) {
   try {
     const resolved = resolveRepoPath(repoPath);
     if (file) {
-      return NextResponse.json(diffFile(resolved, from, to, file));
+      return jsonResponse(request, diffFile(resolved, from, to, file));
     }
-    return NextResponse.json(diffCommits(resolved, from, to));
+    return jsonResponse(request, diffCommits(resolved, from, to));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

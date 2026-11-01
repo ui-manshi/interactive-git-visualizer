@@ -5,9 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { HeadInfo, RawGraphEdge, RawGraphNode } from "@/components/CommitGraph";
-import FileTreeExplorer from "@/components/FileTreeExplorer";
-import DiffViewer, { DiffMode } from "@/components/DiffViewer";
-import ObjectInspector from "@/components/ObjectInspector";
+import type { DiffMode } from "@/components/DiffViewer";
 import FilterBar from "@/components/FilterBar";
 import ShortcutsHelp from "@/components/ShortcutsHelp";
 import { FilterState, computeMatches } from "@/components/graphFilter";
@@ -22,14 +20,30 @@ import { CopyButton, HashValue, MetaGrid, MetaRow } from "@/components/CommitDet
 import { FlagIcon } from "@/components/CommitNode";
 import { isReleaseTag } from "@/components/tags";
 import TimeTravel from "@/components/TimeTravel";
-import BranchComparePanel from "@/components/BranchComparePanel";
-import StatsView from "@/components/StatsView";
-import CherryPickPreview from "@/components/CherryPickPreview";
 
 // React Flow touches window/measures DOM on mount; load it client-only.
-const CommitGraph = dynamic(() => import("@/components/CommitGraph"), {
-  ssr: false,
-});
+const loadCommitGraph = () => import("@/components/CommitGraph");
+const CommitGraph = dynamic(loadCommitGraph, { ssr: false });
+
+// Everything below only appears after a click (a panel tab, the Stats view, a branch comparison), so
+// it is split out of the first load and fetched when needed (or when the browser is idle).
+const panelFallback = <p className="text-muted text-body m-0">Loading…</p>;
+const loadDiffViewer = () => import("@/components/DiffViewer");
+const loadFileTree = () => import("@/components/FileTreeExplorer");
+const loadObjectInspector = () => import("@/components/ObjectInspector");
+const loadStats = () => import("@/components/StatsView");
+const loadBranchCompare = () => import("@/components/BranchComparePanel");
+const loadCherryPick = () => import("@/components/CherryPickPreview");
+const DiffViewer = dynamic(loadDiffViewer, { ssr: false, loading: () => panelFallback });
+const FileTreeExplorer = dynamic(loadFileTree, { ssr: false, loading: () => panelFallback });
+const ObjectInspector = dynamic(loadObjectInspector, { ssr: false, loading: () => panelFallback });
+const StatsView = dynamic(loadStats, { ssr: false, loading: () => panelFallback });
+const BranchComparePanel = dynamic(loadBranchCompare, { ssr: false, loading: () => panelFallback });
+const CherryPickPreview = dynamic(loadCherryPick, { ssr: false });
+
+// Start downloading the graph code now, in parallel with the repository requests. Without this the
+// chunk is only requested after the commit data has arrived, so the two waits add up.
+if (typeof window !== "undefined") void loadCommitGraph();
 
 interface Ref {
   name: string;
@@ -395,6 +409,24 @@ function VisualizerContent() {
     }
     window.history.replaceState(null, "", `${window.location.pathname}?${p.toString()}`);
   }, [repoPath, selectedHash, compareHash, compareMode, tab, diffMode, filter, view, maxCommits, branchCmp]);
+
+  // Once the graph is on screen, fetch the panel code in the background so the first click is instant.
+  useEffect(() => {
+    if (!graph) return;
+    const warm = () => {
+      void loadDiffViewer();
+      void loadFileTree();
+      void loadBranchCompare();
+      void loadCherryPick();
+    };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void };
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(warm);
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(warm, 1500);
+    return () => clearTimeout(t);
+  }, [graph]);
 
   // Pan to the commit named in a shared link once the graph is ready.
   useEffect(() => {
@@ -1429,7 +1461,7 @@ function VisualizerContent() {
                   )}
 
                   {tab === "files" && filesHash && (
-                    <div className="flex flex-col gap-3 h-full">
+                    <div className="flex flex-col gap-3 h-full min-h-[30rem]">
                       {comparing && (
                         <div className="flex gap-1 text-body flex-shrink-0">
                           {(["A", "B"] as const).map((side) => (

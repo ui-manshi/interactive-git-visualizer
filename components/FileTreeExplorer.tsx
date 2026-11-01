@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BlameView, FileHistoryView } from "./FileInsights";
 
 interface FlatFile {
@@ -25,6 +25,8 @@ interface BlobResponse {
 }
 
 const MAX_RENDERED_LINES = 3000;
+const TREE_MIN_H = 72;
+const VIEWER_MIN_H = 160;
 
 function buildTree(files: FlatFile[]): TreeNode {
   const root: TreeNode = { name: "", path: "", children: new Map() };
@@ -87,6 +89,59 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [openFile, setOpenFile] = useState<FlatFile | null>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
+
+  // Height of the file list, set by dragging the bar under it. null = the default share.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [treeH, setTreeH] = useState<number | null>(() => {
+    try {
+      const v = Number(localStorage.getItem("gv.treeH"));
+      return v >= TREE_MIN_H ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    try {
+      if (treeH === null) localStorage.removeItem("gv.treeH");
+      else localStorage.setItem("gv.treeH", String(Math.round(treeH)));
+    } catch {}
+  }, [treeH]);
+
+  /** The list keeps TREE_MIN_H; the viewer keeps room for its header and a few lines. */
+  function clampTreeH(h: number): number {
+    const total = wrapRef.current?.clientHeight ?? 600;
+    return Math.round(Math.min(Math.max(h, TREE_MIN_H), Math.max(TREE_MIN_H, total - VIEWER_MIN_H - 56)));
+  }
+
+  function startTreeResize(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    const tree = handle.previousElementSibling as HTMLElement | null;
+    const startY = e.clientY;
+    const startH = tree?.getBoundingClientRect().height ?? TREE_MIN_H;
+    const move = (ev: PointerEvent) => setTreeH(clampTreeH(startH + ev.clientY - startY));
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", up);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "row-resize";
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", up);
+  }
+
+  // Opening a file scrolls the panel so its content, blame or history is on screen.
+  useEffect(() => {
+    if (!openFile) return;
+    const t = setTimeout(() => viewerRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 50);
+    return () => clearTimeout(t);
+  }, [openFile]);
   const [blob, setBlob] = useState<BlobResponse | null>(null);
   const [blobError, setBlobError] = useState<string | null>(null);
 
@@ -225,8 +280,8 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
 
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0">
-      <p className="text-body text-muted m-0">
+    <div ref={wrapRef} className="flex flex-col gap-3 flex-1 min-h-0">
+      <p className="text-body text-muted m-0 flex-none">
         {files.length} file{files.length === 1 ? "" : "s"} at this commit
         {truncated && " (listing truncated)"}
         {changes && changes.size > 0 && (
@@ -239,13 +294,53 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
         )}
       </p>
 
-      <div className="inset rounded-lg py-1 max-h-64 overflow-y-auto flex-shrink-0">
+      {/* With a file open the tree keeps the upper part and the file gets the rest, so content,
+          blame and history are always on screen with their own scrollbar. */}
+      <div
+        className={`scroll-visible inset rounded-lg py-1 overflow-y-auto overscroll-contain ${
+          openFile ? (treeH === null ? "flex-[0_1_36%] min-h-[8rem]" : "flex-none") : "flex-1 min-h-[8rem]"
+        }`}
+        style={openFile && treeH !== null ? { height: treeH } : undefined}
+      >
         {sortedChildren(root).map((n) => renderNode(n, 0))}
       </div>
 
+      {/* Drag to give the file list or the file viewer more room. Arrow keys work too; double-click resets. */}
       {openFile && (
-        <div className="flex-1 min-h-0 flex flex-col inset rounded-lg overflow-hidden">
-          <div className="px-3 py-2 bg-raised flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <div
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize file list and file viewer"
+          aria-valuemin={TREE_MIN_H}
+          aria-valuenow={treeH ?? undefined}
+          tabIndex={0}
+          onPointerDown={startTreeResize}
+          onDoubleClick={() => setTreeH(null)}
+          onKeyDown={(e) => {
+            const cur = treeH ?? (e.currentTarget.previousElementSibling as HTMLElement | null)?.getBoundingClientRect().height ?? 200;
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setTreeH(clampTreeH(cur - 24));
+            } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setTreeH(clampTreeH(cur + 24));
+            } else if (e.key === "Home") {
+              e.preventDefault();
+              setTreeH(TREE_MIN_H);
+            } else if (e.key === "Enter") {
+              setTreeH(null);
+            }
+          }}
+          title="Drag to resize. Double-click to reset."
+          className="group/split flex-none -my-1.5 h-4 flex items-center justify-center cursor-row-resize touch-none rounded focus-visible:outline-none"
+        >
+          <span className="h-1 w-12 rounded-full bg-line group-hover/split:bg-accent/70 group-focus-visible/split:bg-accent group-active/split:bg-accent transition-colors" />
+        </div>
+      )}
+
+      {openFile && (
+        <div ref={viewerRef} className="flex flex-col inset rounded-lg overflow-hidden flex-1 min-h-[14rem] scroll-mt-2">
+          <div className="flex-none px-3 py-2 bg-raised flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
             <span className="text-body font-mono text-fg/90 min-w-0 basis-full [overflow-wrap:anywhere]" title={openFile.path}>
               {openFile.path}
             </span>
@@ -275,9 +370,9 @@ export default function FileTreeExplorer({ repoPath, commitHash, onGoToCommit, o
             </div>
           </div>
 
-          {insightView && <div className="flex-1 overflow-auto bg-ground/55">{insightView}</div>}
+          {insightView && <div className="scroll-visible flex-1 min-h-0 overflow-auto overscroll-contain bg-ground/55">{insightView}</div>}
 
-          <div className={`flex-1 overflow-auto bg-ground/55 ${insightView ? "hidden" : ""}`}>
+          <div className={`scroll-visible flex-1 min-h-0 overflow-auto overscroll-contain bg-ground/55 ${insightView ? "hidden" : ""}`}>
             {openFile.isSubmodule && (
               <p className="p-3 text-body text-muted">
                 Git submodule — pinned to commit{" "}

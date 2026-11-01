@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonResponse } from "@/lib/jsonResponse";
 import { listFilesAtCommit } from "@/lib/fileTree";
 import { resolveRepoPath } from "@/lib/repoResolver";
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { files, truncated } = listFilesAtCommit(resolveRepoPath(repoPath), commit);
-    return NextResponse.json({ commit, files, truncated });
+    return jsonResponse(request, { commit, files, truncated });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
