@@ -161,8 +161,8 @@ A sandboxed, in-browser Git that never touches a real repository, for learning a
 **Requirements:** Node.js 18.17+ and `git` on your `PATH` (used only to clone/fetch GitHub URLs).
 
 ```bash
-git clone <this-repo-url> git-visualizer
-cd git-visualizer
+git clone https://github.com/ui-manshi/interactive-git-visualizer.git
+cd interactive-git-visualizer
 npm install
 npm run dev
 ```
