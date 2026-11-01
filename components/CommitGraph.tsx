@@ -100,6 +100,8 @@ export default function CommitGraph({
   const [ready, setReady] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [box, setBox] = useState({ w: 0, h: 0 });
+  // Exact (unrounded) workspace size; only used to bound panning, see `extent` below.
+  const [view, setView] = useState({ w: 0, h: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const instRef = useRef<ReactFlowInstance | null>(null);
 
@@ -123,7 +125,10 @@ export default function CommitGraph({
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-    const read = () => setBox({ w: Math.round(el.clientWidth / 40) * 40, h: Math.round(el.clientHeight / 20) * 20 });
+    const read = () => {
+      setBox({ w: Math.round(el.clientWidth / 40) * 40, h: Math.round(el.clientHeight / 20) * 20 });
+      setView({ w: el.clientWidth, h: el.clientHeight });
+    };
     read();
     const ro = new ResizeObserver(read);
     ro.observe(el);
@@ -233,6 +238,20 @@ export default function CommitGraph({
     return out.sort((a, b) => emphasis(a) - emphasis(b));
   }, [edges, model, lanes, yById, matchedHashes, ancestry, hiddenHashes]);
 
+  // Bound panning to the history. Without this the canvas is infinite: the wheel, a drag or a
+  // programmatic scroll could carry the rows off screen into empty space, and the first/last commit
+  // was never a natural stopping point. The box never gets smaller than the workspace itself, so a
+  // short history stays pinned to the top-left instead of being centred by the clamp.
+  const extent = useMemo<[[number, number], [number, number]]>(() => {
+    let bottom = 0;
+    for (const n of nodes) bottom = Math.max(bottom, n.position.y + ROW_H);
+    const right = labelX + labelW + gutter;
+    return [
+      [-EDGE_PAD, -EDGE_PAD],
+      [Math.max(right, view.w - EDGE_PAD), Math.max(bottom + EDGE_PAD, view.h - EDGE_PAD)],
+    ];
+  }, [nodes, labelX, labelW, gutter, view]);
+
   const mini = useMemo<MiniCtxValue>(() => {
     const color = new Map<string, string>();
     for (const n of nodes) color.set(n.id, model.colorOf(n.id));
@@ -284,6 +303,8 @@ export default function CommitGraph({
           edgesFocusable={false}
           // A long history reads like a list: the wheel scrolls it, Ctrl/⌘+wheel or pinch zooms.
           panOnScroll
+          panOnScrollSpeed={1}
+          translateExtent={extent}
           zoomOnScroll={false}
           zoomOnDoubleClick={false}
           // Only rows and edges inside the viewport are rendered, which keeps thousands of commits responsive.
