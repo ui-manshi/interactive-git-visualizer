@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const resolvedPath = resolveRepoPath(repoPath);
+    const resolvedPath = await resolveRepoPath(repoPath);
     const refs = listBranchRefs(resolvedPath);
     // Newest tag first, so release markers read like a changelog.
     const tags = listTagRefs(resolvedPath)

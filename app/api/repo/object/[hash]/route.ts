@@ -21,7 +21,7 @@ export async function GET(
   }
 
   try {
-    const resolvedPath = resolveRepoPath(repoPath);
+    const resolvedPath = await resolveRepoPath(repoPath);
     const obj = parseObject(resolvedPath, hash);
 
     // Blob content is a Buffer; make it JSON-safe.

@@ -1,0 +1,18 @@
+# Render Blueprint: deploys this repo as a Docker web service.
+# Dashboard: New + > Blueprint > pick this repository.
+services:
+  - type: web
+    name: git-visualizer
+    runtime: docker
+    plan: free              # free is fine to try it; use "starter" for a persistent, faster service
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: ALLOW_LOCAL_PATHS
+        value: "false"      # hosted mode: only public GitHub URLs, no local paths
+      - key: MAX_REPO_MB
+        value: "200"        # abort clones bigger than this (the free plan has 512 MB RAM)
+      - key: MAX_CACHED_REPOS
+        value: "15"
+      - key: RATE_LIMIT_PER_MIN
+        value: "300"

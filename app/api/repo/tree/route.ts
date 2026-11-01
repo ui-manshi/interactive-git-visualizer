@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { files, truncated } = listFilesAtCommit(resolveRepoPath(repoPath), commit);
+    const { files, truncated } = listFilesAtCommit(await resolveRepoPath(repoPath), commit);
     return jsonResponse(request, { commit, files, truncated });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });

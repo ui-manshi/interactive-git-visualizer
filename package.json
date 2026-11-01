@@ -8,7 +8,8 @@
     "start": "next start",
     "test:parser": "tsx scripts/test-parser.ts",
     "test:diff": "tsx scripts/test-diff.ts",
-    "test:vs-git": "tsx scripts/test-vs-git.ts"
+    "test:vs-git": "tsx scripts/test-vs-git.ts",
+    "test:security": "tsx scripts/test-security.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

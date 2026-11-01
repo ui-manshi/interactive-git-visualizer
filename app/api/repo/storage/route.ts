@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing required query param: path" }, { status: 400 });
   }
   try {
-    const resolved = resolveRepoPath(repoPath);
+    const resolved = await resolveRepoPath(repoPath);
     return NextResponse.json({
       packs: packStats(resolved),
       loose: looseStats(resolved),

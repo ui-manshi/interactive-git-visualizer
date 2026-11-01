@@ -17,7 +17,7 @@ export async function GET(
   }
 
   try {
-    const resolved = resolveRepoPath(repoPath);
+    const resolved = await resolveRepoPath(repoPath);
     return NextResponse.json(inspectObject(resolved, params.hash));
   } catch (err) {
     return NextResponse.json(

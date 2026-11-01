@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing required query params: path, base, head" }, { status: 400 });
   }
   try {
-    return NextResponse.json(mergePreview(resolveRepoPath(repoPath), base, head));
+    return NextResponse.json(mergePreview(await resolveRepoPath(repoPath), base, head));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

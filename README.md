@@ -12,7 +12,7 @@ Point it at any local repo or public GitHub URL and explore the commit graph, fi
 ![React Flow](https://img.shields.io/badge/React%20Flow-11-FF0072)
 ![Responsive](https://img.shields.io/badge/Responsive-phone%20%7C%20tablet%20%7C%20desktop-62C7B2)
 
-[Quick start](#-quick-start) · [Features](#-features) · [How it works](#-how-it-works) · [Keyboard shortcuts](#-keyboard-shortcuts) · [API](#-api-reference) · [Testing](#-testing) · [Troubleshooting](#-troubleshooting)
+[Quick start](#-quick-start) · [Deploy](#-deploy-on-render) · [Features](#-features) · [How it works](#-how-it-works) · [Keyboard shortcuts](#-keyboard-shortcuts) · [API](#-api-reference) · [Testing](#-testing) · [Troubleshooting](#-troubleshooting)
 
 </div>
 
@@ -28,6 +28,78 @@ That makes it two things at once:
 - a **living explanation of Git's internals**: every commit, tree and blob you see is one you can open in the **Raw** tab and verify against its SHA-1.
 
 > `git` is invoked for exactly one job: the network transfer (`git clone` / `git fetch`) when you open a GitHub URL. Reading and decoding objects never shells out.
+
+---
+
+## 🌐 Deploy on Render
+
+The repo includes a `Dockerfile` and a `render.yaml` Blueprint, so deploying is a few clicks. The hosted build runs in a **locked-down mode**: only public `https://github.com/<owner>/<repo>` URLs are accepted, and local paths are refused (see [Security](#-security)).
+
+**1. Push the project to GitHub** (with `Dockerfile` and `render.yaml` at the top level).
+
+**2. Create the service on Render**
+
+1. Sign in at [render.com](https://render.com) with GitHub.
+2. Click **New +** → **Blueprint**, pick this repository, and click **Apply**.
+   Render reads `render.yaml`, builds the Docker image and starts the service.
+   *(Prefer clicking through? **New +** → **Web Service** → choose the repo → **Runtime: Docker**, set **Health Check Path** to `/api/health`, and add the environment variables below.)*
+3. Wait for the first build (a few minutes). Your app is then live at `https://<service-name>.onrender.com`.
+
+**3. Check it**
+
+- Open the URL and paste `https://github.com/octocat/Hello-World`.
+- `https://<service-name>.onrender.com/api/health` should return `{"ok":true}`.
+- Pasting a local path such as `/etc` should show *"Local paths are disabled on this server"*.
+
+**Good to know on the free plan**
+
+- The service **sleeps after ~15 minutes idle**, so the first visit after a pause takes about a minute to wake.
+- The disk is **not persistent**: cloned repositories are cached only until the next restart or deploy, then re-cloned on demand.
+- It has **512 MB RAM**, which is why `MAX_REPO_MB` defaults to 200 in `render.yaml`. For big repositories or always-on hosting, choose a paid instance.
+
+**Environment variables**
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ALLOW_LOCAL_PATHS` | `true` locally, `false` in Docker | `false` = hosted mode: only public GitHub URLs, no local paths |
+| `MAX_REPO_MB` | `200` in Docker (unlimited locally) | Abort a clone that grows past this size |
+| `MAX_CACHED_REPOS` | `25` (`15` in Docker) | Keep at most this many clones; least recently used are deleted |
+| `MAX_CONCURRENT_CLONES` | `2` | Clones allowed at once; extra requests get a "server busy" message |
+| `RATE_LIMIT_PER_MIN` | `300` | Per-IP API requests per minute (`0` turns it off) |
+| `CLONE_CACHE_DIR` | `/data/clones` in Docker | Where clones are stored |
+| `PORT` | `10000` in Docker | Provided by Render automatically |
+
+**Run the container yourself**
+
+```bash
+docker build -t git-visualizer .
+docker run --rm -p 3000:10000 git-visualizer     # then open http://localhost:3000
+```
+
+---
+
+## 🔒 Security
+
+Opening a repository means the server reads files and runs `git clone`, so a public deployment is hardened:
+
+| Risk | Protection |
+|---|---|
+| **Command injection** through the URL | `git` is started with an argument list (never a shell string), the URL comes after `--`, and URLs with shell or control characters are rejected |
+| **Reading the server's own files** | Hosted mode refuses every local path; only `https://github.com/<owner>/<repo>` is accepted |
+| **Other protocols** (`file://`, `ssh`, credentials in URLs) | Blocked: hosted mode allows HTTPS to github.com only, and `GIT_ALLOW_PROTOCOL` / `protocol.file.allow=never` are set on every git call |
+| **Hanging or huge clones** | 5-minute timeout, `MAX_REPO_MB` size cap enforced *while* cloning, and at most `MAX_CONCURRENT_CLONES` at once |
+| **One slow clone freezing everyone** | Clones are asynchronous, and simultaneous requests for the same repo share one clone |
+| **Disk filling up** | `--no-checkout` clones (objects only), plus least-recently-used eviction beyond `MAX_CACHED_REPOS` |
+| **Request flooding** | Per-IP rate limit on `/api/repo/*` (HTTP 429 with `Retry-After`) |
+| **Information leaks** | Hosted error messages omit raw git output and server paths; the container runs as a non-root user; security headers are set |
+
+Run the checks (they include real clones, so they need network access):
+
+```bash
+npm run test:security
+```
+
+> Running locally with a **local path** is still the intended personal use: `ALLOW_LOCAL_PATHS` defaults to `true` outside Docker. Only the hosted build restricts input.
 
 ---
 
@@ -237,8 +309,10 @@ git-visualizer/
 │   ├── myersDiff.ts             # Minimal line diff
 │   ├── merge3.ts                # Three-way merge
 │   ├── fileInsights.ts          # Blame and file history
-│   └── repoResolver.ts          # Local path vs GitHub URL, clone cache
-└── scripts/                     # Test harnesses (parser, diff, vs-native-git)
+│   └── repoResolver.ts          # Input validation, safe async clone, size caps, cache
+├── middleware.ts                # Per-IP rate limit for /api/repo/*
+├── Dockerfile  render.yaml      # Container build and Render Blueprint
+└── scripts/                     # Test harnesses (parser, diff, vs-native-git, security)
 ```
 
 ---
@@ -252,6 +326,8 @@ npm run test:vs-git -- /path/to/repo   # Every file listing, status and +/- coun
                                        # pair of commits, compared with native git
 npm run test:parser -- /path/to/repo   # Walks history, parses each commit, verifies every
                                        # object's SHA-1 and prints the tip commit's tree
+npm run test:security                  # URL validation, injection attempts, local-path refusal,
+                                       # real clone, shared clones, size cap (needs network)
 ```
 
 `git` is used here **only as a test oracle**; the app itself never shells out to it to read objects.
@@ -277,7 +353,9 @@ Branches shown include remote-tracking ones (`origin/…`), because a fresh clon
 - Renames are not detected: they show as a delete plus an add, and blame/history restart at the new path.
 - Annotated tag objects are recognised by the pack reader but have no dedicated detail view.
 - Merge, rebase and cherry-pick previews are **read-only simulations** of Git's behaviour. They are not guaranteed to match every strategy option or edge case of a real `git merge`.
-- The server reads the filesystem path you give it, so run this as a **local tool**. Do not expose it publicly without adding access controls.
+- With `ALLOW_LOCAL_PATHS=true` (the local default) the server reads any filesystem path you give it. **Never expose that mode publicly**; the Docker image turns it off.
+- Hosted mode supports public GitHub repositories only (no private repos, no other hosts).
+- Rate limiting and clone queues are kept in memory, so they apply per server instance.
 
 ---
 

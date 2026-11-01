@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const resolved = resolveRepoPath(repoPath);
+    const resolved = await resolveRepoPath(repoPath);
     if (file) {
       return jsonResponse(request, diffFile(resolved, from, to, file));
     }

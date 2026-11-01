@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing required query params: path, commit, file" }, { status: 400 });
   }
   try {
-    return NextResponse.json(fileHistory(resolveRepoPath(repoPath), commit, file));
+    return NextResponse.json(fileHistory(await resolveRepoPath(repoPath), commit, file));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

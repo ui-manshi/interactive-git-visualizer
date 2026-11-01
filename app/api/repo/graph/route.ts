@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const resolvedPath = resolveRepoPath(repoPath);
+    const resolvedPath = await resolveRepoPath(repoPath);
     // Clamp so a crafted URL cannot ask for an unbounded layout.
     const parsed = maxParam ? parseInt(maxParam, 10) : NaN;
     const max = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), MAX_COMMITS) : undefined;

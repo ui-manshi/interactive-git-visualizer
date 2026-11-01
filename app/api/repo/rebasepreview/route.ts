@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing required query params: path, onto, head" }, { status: 400 });
   }
   try {
-    return NextResponse.json(rebasePreview(resolveRepoPath(repoPath), onto, head));
+    return NextResponse.json(rebasePreview(await resolveRepoPath(repoPath), onto, head));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

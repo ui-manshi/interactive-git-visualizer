@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing required query param: path" }, { status: 400 });
   }
   try {
-    return NextResponse.json(hotFiles(resolveRepoPath(repoPath)));
+    return NextResponse.json(hotFiles(await resolveRepoPath(repoPath)));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }

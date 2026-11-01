@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const buf = readBlob(resolveRepoPath(repoPath), hash);
+    const buf = readBlob(await resolveRepoPath(repoPath), hash);
     if (isBinary(buf)) {
       return NextResponse.json({ hash, size: buf.length, binary: true, truncated: false, content: "" });
     }

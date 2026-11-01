@@ -22,7 +22,7 @@ export async function GET(
   }
 
   try {
-    const resolvedPath = resolveRepoPath(repoPath);
+    const resolvedPath = await resolveRepoPath(repoPath);
     const valid = verifyObjectHash(resolvedPath, hash);
     return NextResponse.json({ hash, valid });
   } catch (err) {
