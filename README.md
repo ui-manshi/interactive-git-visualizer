@@ -291,4 +291,4 @@ Issues and pull requests are welcome. Before opening a PR:
 
 ## 📄 License
 
-No license file is included yet. Add one (for example MIT) before publishing the repository.
+Released under the [MIT License](LICENSE). Copyright © 2026 Manshi Gupta.
