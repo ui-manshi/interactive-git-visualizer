@@ -12,6 +12,8 @@ Point it at any local repo or public GitHub URL and explore the commit graph, fi
 ![React Flow](https://img.shields.io/badge/React%20Flow-11-FF0072)
 ![Responsive](https://img.shields.io/badge/Responsive-phone%20%7C%20tablet%20%7C%20desktop-62C7B2)
 
+[![XERJ Corpus Hub](https://img.shields.io/badge/XERJ-Corpus_Hub_Contributor-7C3AED?style=for-the-badge)](https://hub.xerj.org/contributors/ui-manshi)
+
 [Quick start](#-quick-start) · [Deploy](#-deploy-on-render) · [Features](#-features) · [How it works](#-how-it-works) · [Keyboard shortcuts](#-keyboard-shortcuts) · [API](#-api-reference) · [Testing](#-testing) · [Troubleshooting](#-troubleshooting)
 
 </div>
@@ -366,6 +368,16 @@ Issues and pull requests are welcome. Before opening a PR:
 1. `npx tsc --noEmit` passes.
 2. `npm run build` succeeds.
 3. The relevant `npm run test:*` scripts pass if you touched parsing, diffing or merging.
+
+
+## 🌟 Recognition
+
+This project is featured on the [**XERJ Corpus Hub**](https://hub.xerj.org/contributors/ui-manshi), an open reference hub for AI coding agents.
+
+The **"Add dragbar"** implementation was selected as a worked reference, allowing AI coding agents to retrieve and learn from the actual TypeScript and JavaScript source code.
+
+[**View XERJ Contributor Profile →**](https://hub.xerj.org/contributors/ui-manshi)
+
 
 ## 📄 License
 
